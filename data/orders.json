@@ -51,37 +51,7 @@
     "createdAt": "2025-01-12T10:15:00.789Z"
   },
   {
-    "id": "1748120663164",
-    "vin": "3HGCM82633A789012",
-    "selectedCar": {
-      "vin": "3HGCM82633A789012",
-      "brand": "Ford",
-      "model": "Explorer",
-      "type": "SUV",
-      "year": 2023,
-      "mileage": 8000,
-      "fuelType": "Gasoline",
-      "pricePerDay": 65,
-      "available": true,
-      "image": "/api/placeholder/400/300",
-      "description": "7-seater SUV ideal for family trips and outdoor adventures."
-    },
-    "customerInfo": {
-      "name": "WEIHUA ZHANG",
-      "email": "valerieznb@gmail.com",
-      "phone": "0478182016",
-      "driverLicense": "SDsdfafdad"
-    },
-    "rentalPeriod": {
-      "startDate": "2025-05-25",
-      "days": 3
-    },
-    "totalPrice": 195,
-    "status": "confirmed",
-    "createdAt": "2025-05-24T21:04:23.164Z"
-  },
-  {
-    "id": "1748120701616",
+    "id": "1748124501225",
     "vin": "2HGCM82633A654321",
     "selectedCar": {
       "vin": "2HGCM82633A654321",
@@ -104,103 +74,11 @@
     },
     "rentalPeriod": {
       "startDate": "2025-05-25",
-      "days": 2
-    },
-    "totalPrice": 84,
-    "status": "confirmed",
-    "createdAt": "2025-05-24T21:05:01.616Z"
-  },
-  {
-    "id": "1748121052122",
-    "vin": "5HGCM82633A901234",
-    "selectedCar": {
-      "vin": "5HGCM82633A901234",
-      "brand": "Mazda",
-      "model": "CX-5",
-      "type": "SUV",
-      "year": 2022,
-      "mileage": 18000,
-      "fuelType": "Gasoline",
-      "pricePerDay": 55,
-      "available": true,
-      "image": "/api/placeholder/400/300",
-      "description": "Stylish crossover SUV with excellent fuel economy and smooth handling."
-    },
-    "customerInfo": {
-      "name": "WEIHUA ZHANG",
-      "email": "valerieznb@gmail.com",
-      "phone": "0478182016",
-      "driverLicense": "SDsdfafdad"
-    },
-    "rentalPeriod": {
-      "startDate": "2025-05-25",
       "days": 1
     },
-    "totalPrice": 55,
+    "totalPrice": 42,
     "status": "confirmed",
-    "createdAt": "2025-05-24T21:10:52.122Z",
-    "confirmedAt": "2025-05-24T21:10:53.102Z"
-  },
-  {
-    "id": "1748122807940",
-    "vin": "6HGCM82633A567890",
-    "selectedCar": {
-      "vin": "6HGCM82633A567890",
-      "brand": "Tesla",
-      "model": "Model 3",
-      "type": "Sedan",
-      "year": 2023,
-      "mileage": 3000,
-      "fuelType": "Electric",
-      "pricePerDay": 75,
-      "available": true,
-      "image": "/api/placeholder/400/300",
-      "description": "All-electric luxury sedan with autopilot capabilities and zero emissions."
-    },
-    "customerInfo": {
-      "name": "WEIHUA ZHANG",
-      "email": "valerieznb@gmail.com",
-      "phone": "0478182016",
-      "driverLicense": "SDsdfafdad"
-    },
-    "rentalPeriod": {
-      "startDate": "2025-05-25",
-      "days": 1
-    },
-    "totalPrice": 75,
-    "status": "confirmed",
-    "createdAt": "2025-05-24T21:40:07.940Z",
-    "confirmedAt": "2025-05-24T21:40:09.580Z"
-  },
-  {
-    "id": "1748122823105",
-    "vin": "9HGCM82633A456789",
-    "selectedCar": {
-      "vin": "9HGCM82633A456789",
-      "brand": "Jeep",
-      "model": "Wrangler",
-      "type": "SUV",
-      "year": 2022,
-      "mileage": 30000,
-      "fuelType": "Gasoline",
-      "pricePerDay": 60,
-      "available": true,
-      "image": "/api/placeholder/400/300",
-      "description": "Rugged off-road SUV built for adventure and outdoor exploration."
-    },
-    "customerInfo": {
-      "name": "WEIHUA ZHANG",
-      "email": "valerieznb@gmail.com",
-      "phone": "0478182016",
-      "driverLicense": "SDsdfafdad"
-    },
-    "rentalPeriod": {
-      "startDate": "2025-05-25",
-      "days": 1
-    },
-    "totalPrice": 60,
-    "status": "confirmed",
-    "createdAt": "2025-05-24T21:40:23.105Z",
-    "confirmedAt": "2025-05-24T21:40:24.811Z"
+    "createdAt": "2025-05-24T22:08:21.225Z",
+    "confirmedAt": "2025-05-24T22:08:30.014Z"
   }
 ]

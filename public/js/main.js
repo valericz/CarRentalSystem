@@ -1,6 +1,7 @@
 // 全局变量
 let allCars = [];
 let currentBrandFilter = '';
+let currentTypeFilter = '';
 let currentSearchQuery = '';
 let searchDebounceTimer = null;
 
@@ -8,9 +9,30 @@ let searchDebounceTimer = null;
 $(document).ready(function () {
     console.log('🚀 Initializing car rental app...');
 
+    // 检查是否需要显示保存成功提示
+    checkAndShowSaveSuccess();
+
     initializeFilters();
     loadCars();
 });
+
+// 检查并显示保存成功提示
+function checkAndShowSaveSuccess() {
+    if (localStorage.getItem('showSaveSuccess')) {
+        const successHtml = `
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                Your reservation details have been saved. You can complete the booking later.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+
+        $('main .container').prepend(successHtml);
+
+        // 清除标记
+        localStorage.removeItem('showSaveSuccess');
+    }
+}
 
 // 品牌筛选处理函数
 function handleBrandFilter() {
@@ -21,8 +43,19 @@ function handleBrandFilter() {
     applyFilters();
 }
 
+// 类型筛选处理函数
+function handleTypeFilter() {
+    currentTypeFilter = $('#typeFilter').val();
+    console.log('🔍 Type filter selected:', currentTypeFilter);
+
+    // 应用筛选
+    applyFilters();
+}
+
 // 搜索处理函数 - 使用防抖
 function handleSearch() {
+    const query = $('#searchInput').val().trim();
+
     // 清除之前的定时器
     if (searchDebounceTimer) {
         clearTimeout(searchDebounceTimer);
@@ -30,43 +63,128 @@ function handleSearch() {
 
     // 设置新的定时器
     searchDebounceTimer = setTimeout(() => {
-        currentSearchQuery = $('#searchInput').val().trim().toLowerCase();
-        console.log('🔍 Search query:', currentSearchQuery);
-        applyFilters();
+        currentSearchQuery = query.toLowerCase();
+
+        // 如果查询长度大于等于2，显示搜索建议
+        if (query.length >= 2) {
+            showSearchSuggestions(query);
+        } else {
+            hideSearchSuggestions();
+            // 如果搜索框为空，显示所有车辆
+            if (query.length === 0) {
+                applyFilters();
+            }
+        }
     }, 300); // 300ms 防抖延迟
+}
+
+// 显示搜索建议
+async function showSearchSuggestions(query) {
+    try {
+        // 获取搜索建议
+        const suggestions = generateSearchSuggestions(query);
+
+        // 如果没有建议，隐藏建议框
+        if (suggestions.length === 0) {
+            hideSearchSuggestions();
+            return;
+        }
+
+        // 创建建议列表HTML
+        const suggestionsHtml = suggestions.map(suggestion => `
+            <div class="suggestion-item" data-value="${suggestion}">
+                <i class="fas fa-search me-2"></i>
+                ${highlightQuery(suggestion, query)}
+            </div>
+        `).join('');
+
+        // 显示建议
+        const $suggestions = $('#searchSuggestions');
+        $suggestions.html(suggestionsHtml).show();
+
+        // 绑定建议点击事件
+        $('.suggestion-item').on('click', function () {
+            const selectedValue = $(this).data('value');
+            $('#searchInput').val(selectedValue);
+            hideSearchSuggestions();
+            currentSearchQuery = selectedValue.toLowerCase();
+            applyFilters();
+        });
+
+    } catch (error) {
+        console.error('Error showing search suggestions:', error);
+        hideSearchSuggestions();
+    }
+}
+
+// 生成搜索建议
+function generateSearchSuggestions(query) {
+    const queryLower = query.toLowerCase();
+    const suggestions = new Set();
+
+    // 从现有车辆数据中生成建议
+    allCars.forEach(car => {
+        // 添加匹配的品牌
+        if (car.brand.toLowerCase().includes(queryLower)) {
+            suggestions.add(car.brand);
+        }
+        // 添加匹配的型号
+        if (car.model.toLowerCase().includes(queryLower)) {
+            suggestions.add(`${car.brand} ${car.model}`);
+        }
+        // 添加匹配的类型
+        if (car.type.toLowerCase().includes(queryLower)) {
+            suggestions.add(car.type);
+        }
+    });
+
+    // 转换为数组并限制数量
+    return Array.from(suggestions).slice(0, 5);
+}
+
+// 隐藏搜索建议
+function hideSearchSuggestions() {
+    $('#searchSuggestions').hide().empty();
+}
+
+// 高亮搜索查询
+function highlightQuery(text, query) {
+    const regex = new RegExp(`(${query})`, 'gi');
+    return text.replace(regex, '<strong>$1</strong>');
 }
 
 // 应用所有筛选器
 function applyFilters() {
-    console.log('📊 Applying filters - Brand:', currentBrandFilter, 'Search:', currentSearchQuery);
+    console.log('📊 Applying filters - Brand:', currentBrandFilter, 'Type:', currentTypeFilter, 'Search:', currentSearchQuery);
 
     // 如果没有任何筛选条件，直接显示所有车辆
-    if (!currentBrandFilter && !currentSearchQuery) {
+    if (!currentBrandFilter && !currentTypeFilter && !currentSearchQuery) {
         displayCars(allCars);
         updateResultsCount(allCars.length, allCars.length);
         return;
     }
 
     let filteredCars = allCars.filter(car => {
-        // 检查品牌筛选（支持 brand 或 make 字段）
-        if (currentBrandFilter) {
-            const carBrand = car.brand || car.make || '';
-            if (carBrand !== currentBrandFilter) {
-                console.log('❌ Brand mismatch:', carBrand, '!==', currentBrandFilter);
-                return false;
-            }
+        // 检查品牌筛选
+        if (currentBrandFilter && car.brand !== currentBrandFilter) {
+            return false;
+        }
+
+        // 检查类型筛选
+        if (currentTypeFilter && car.type !== currentTypeFilter) {
+            return false;
         }
 
         // 检查搜索筛选
         if (currentSearchQuery) {
             const searchFields = [
-                car.brand || car.make || '',
-                car.model || '',
-                car.type || ''
+                car.brand,
+                car.model,
+                car.type,
+                car.description || ''
             ].join(' ').toLowerCase();
 
             if (!searchFields.includes(currentSearchQuery)) {
-                console.log('❌ Search mismatch for:', car.brand || car.make, car.model);
                 return false;
             }
         }
@@ -193,9 +311,8 @@ function updateResultsCount(filtered, total) {
 
 // 填充品牌筛选器
 function populateBrandFilter(cars) {
-    // 获取所有唯一品牌（支持 brand 或 make 字段）
-    const brands = [...new Set(cars.map(car => car.brand || car.make || 'Unknown'))].sort();
-
+    // 获取所有唯一品牌
+    const brands = [...new Set(cars.map(car => car.brand))].sort();
     console.log('🏷️ Available brands:', brands);
 
     let brandOptions = '<option value="">All Brands</option>';
@@ -206,6 +323,20 @@ function populateBrandFilter(cars) {
     $('#brandFilter').html(brandOptions);
 }
 
+// 填充类型筛选器
+function populateTypeFilter(cars) {
+    // 获取所有唯一类型
+    const types = [...new Set(cars.map(car => car.type))].sort();
+    console.log('🏷️ Available types:', types);
+
+    let typeOptions = '<option value="">All Types</option>';
+    types.forEach(type => {
+        typeOptions += `<option value="${type}">${type}</option>`;
+    });
+
+    $('#typeFilter').html(typeOptions);
+}
+
 // 清除筛选器
 function clearFilters() {
     // 清除定时器
@@ -214,9 +345,11 @@ function clearFilters() {
     }
 
     currentBrandFilter = '';
+    currentTypeFilter = '';
     currentSearchQuery = '';
 
     $('#brandFilter').val('');
+    $('#typeFilter').val('');
     $('#searchInput').val('');
 
     // 使用 requestAnimationFrame 优化渲染
@@ -244,6 +377,7 @@ async function loadCars() {
         // 使用 requestAnimationFrame 优化初始渲染
         requestAnimationFrame(() => {
             populateBrandFilter(cars);
+            populateTypeFilter(cars);
             displayCars(cars);
             updateResultsCount(cars.length, cars.length);
         });
@@ -267,7 +401,59 @@ function initializeFilters() {
 
     // 移除可能存在的旧事件监听器
     $('#brandFilter').off('change').on('change', handleBrandFilter);
+    $('#typeFilter').off('change').on('change', handleTypeFilter);
     $('#searchInput').off('input').on('input', handleSearch);
+
+    // 添加搜索框失焦事件，延迟隐藏建议框
+    $('#searchInput').on('blur', function () {
+        setTimeout(hideSearchSuggestions, 200);
+    });
+
+    // 添加搜索框键盘事件
+    $('#searchInput').on('keydown', function (e) {
+        const $suggestions = $('.suggestion-item');
+        let $selected = $('.suggestion-item.selected');
+        let index = $suggestions.index($selected);
+
+        switch (e.keyCode) {
+            case 40: // 下箭头
+                e.preventDefault();
+                if (index < $suggestions.length - 1) {
+                    if ($selected.length) {
+                        $selected.removeClass('selected');
+                        $selected = $suggestions.eq(index + 1).addClass('selected');
+                    } else {
+                        $suggestions.first().addClass('selected');
+                    }
+                }
+                break;
+
+            case 38: // 上箭头
+                e.preventDefault();
+                if (index > 0) {
+                    $selected.removeClass('selected');
+                    $selected = $suggestions.eq(index - 1).addClass('selected');
+                }
+                break;
+
+            case 13: // 回车
+                e.preventDefault();
+                if ($selected.length) {
+                    const selectedValue = $selected.data('value');
+                    $('#searchInput').val(selectedValue);
+                    hideSearchSuggestions();
+                    currentSearchQuery = selectedValue.toLowerCase();
+                    applyFilters();
+                } else {
+                    applyFilters();
+                }
+                break;
+
+            case 27: // ESC
+                hideSearchSuggestions();
+                break;
+        }
+    });
 
     console.log('✅ Filters initialized');
 }
@@ -276,14 +462,15 @@ function initializeFilters() {
 window.debugFilters = function () {
     console.log('🔍 Current filters:', {
         brand: currentBrandFilter,
+        type: currentTypeFilter,
         search: currentSearchQuery,
         totalCars: allCars.length
     });
 
-    console.log('🏷️ Available brands:', [...new Set(allCars.map(car => car.brand || car.make))]);
+    console.log('🏷️ Available brands:', [...new Set(allCars.map(car => car.brand))]);
 
     return {
         allCars: allCars,
-        currentFilters: { brand: currentBrandFilter, search: currentSearchQuery }
+        currentFilters: { brand: currentBrandFilter, type: currentTypeFilter, search: currentSearchQuery }
     };
 };

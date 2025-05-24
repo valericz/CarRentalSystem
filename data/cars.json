@@ -8,8 +8,8 @@
     "mileage": 15000,
     "fuelType": "Gasoline",
     "pricePerDay": 45,
-    "available": false,
-    "image": "/api/placeholder/400/300",
+    "available": true,
+    "image": "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb",
     "description": "Reliable and fuel-efficient sedan perfect for business trips and daily commuting."
   },
   {
@@ -22,7 +22,7 @@
     "fuelType": "Gasoline",
     "pricePerDay": 42,
     "available": false,
-    "image": "/api/placeholder/400/300",
+    "image": "https://images.unsplash.com/photo-1617469767053-d3b523a0b982",
     "description": "Spacious and comfortable sedan with excellent safety ratings."
   },
   {
@@ -35,7 +35,7 @@
     "fuelType": "Gasoline",
     "pricePerDay": 65,
     "available": false,
-    "image": "/api/placeholder/400/300",
+    "image": "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf",
     "description": "7-seater SUV ideal for family trips and outdoor adventures."
   },
   {
@@ -47,8 +47,8 @@
     "mileage": 5000,
     "fuelType": "Gasoline",
     "pricePerDay": 85,
-    "available": false,
-    "image": "/api/placeholder/400/300",
+    "available": true,
+    "image": "https://images.unsplash.com/photo-1677961019377-d45643fde74f?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "description": "Luxury compact SUV with premium features and exceptional performance."
   },
   {
@@ -60,8 +60,8 @@
     "mileage": 18000,
     "fuelType": "Gasoline",
     "pricePerDay": 55,
-    "available": false,
-    "image": "/api/placeholder/400/300",
+    "available": true,
+    "image": "https://images.unsplash.com/photo-1683006443779-d4a3095845cd?q=80&w=1528&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "description": "Stylish crossover SUV with excellent fuel economy and smooth handling."
   },
   {
@@ -73,8 +73,8 @@
     "mileage": 3000,
     "fuelType": "Electric",
     "pricePerDay": 75,
-    "available": false,
-    "image": "/api/placeholder/400/300",
+    "available": true,
+    "image": "https://images.unsplash.com/photo-1560958089-b8a1929cea89",
     "description": "All-electric luxury sedan with autopilot capabilities and zero emissions."
   },
   {
@@ -87,7 +87,7 @@
     "fuelType": "Gasoline",
     "pricePerDay": 50,
     "available": true,
-    "image": "/api/placeholder/400/300",
+    "image": "https://images.unsplash.com/photo-1609772168759-418d69e4b5a2?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "description": "Versatile wagon with all-wheel drive, perfect for all weather conditions."
   },
   {
@@ -99,8 +99,8 @@
     "mileage": 7000,
     "fuelType": "Gasoline",
     "pricePerDay": 70,
-    "available": false,
-    "image": "/api/placeholder/400/300",
+    "available": true,
+    "image": "https://images.unsplash.com/photo-1606152421802-db97b9c7a11b",
     "description": "Premium sedan with advanced technology and superior comfort."
   },
   {
@@ -112,8 +112,8 @@
     "mileage": 30000,
     "fuelType": "Gasoline",
     "pricePerDay": 60,
-    "available": false,
-    "image": "/api/placeholder/400/300",
+    "available": true,
+    "image": "https://images.unsplash.com/photo-1506015391300-4802dc74de2e?q=80&w=1559&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "description": "Rugged off-road SUV built for adventure and outdoor exploration."
   },
   {
@@ -126,7 +126,7 @@
     "fuelType": "Gasoline",
     "pricePerDay": 38,
     "available": true,
-    "image": "/api/placeholder/400/300",
+    "image": "https://images.unsplash.com/photo-1692565343875-1245359964d2?q=80&w=1476&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "description": "European engineering with excellent fuel efficiency and comfortable ride."
   },
   {
@@ -138,8 +138,8 @@
     "mileage": 12000,
     "fuelType": "Gasoline",
     "pricePerDay": 48,
-    "available": false,
-    "image": "/api/placeholder/400/300",
+    "available": true,
+    "image": "https://images.unsplash.com/photo-1575090536203-2a6193126514?q=80&w=1471&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "description": "Compact SUV with modern design and comprehensive warranty coverage."
   },
   {
@@ -152,7 +152,7 @@
     "fuelType": "Gasoline",
     "pricePerDay": 40,
     "available": true,
-    "image": "/api/placeholder/400/300",
+    "image": "https://images.unsplash.com/photo-1581540222194-0def2dda95b8?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     "description": "Mid-size sedan with intelligent mobility features and comfortable interior."
   },
   {
@@ -165,7 +165,7 @@
     "fuelType": "Gasoline",
     "pricePerDay": 80,
     "available": true,
-    "image": "/api/placeholder/400/300",
+    "image": "https://www.chevrolet.com/content/dam/chevrolet/na/us/english/index/vehicles/2025/suvs/tahoe/masthead/2025-tahoe-mov-masthead-01-v2.png?imwidth=1920",
     "description": "Full-size SUV with three rows of seating and powerful towing capacity."
   },
   {
@@ -177,8 +177,8 @@
     "mileage": 4000,
     "fuelType": "Gasoline",
     "pricePerDay": 95,
-    "available": false,
-    "image": "/api/placeholder/400/300",
+    "available": true,
+    "image": "https://www.topgear.com/sites/default/files/2021/11/Mercedes_C300D_0000.jpg?w=892&h=502",
     "description": "Luxury sedan with cutting-edge technology and unparalleled comfort."
   },
   {
@@ -191,7 +191,7 @@
     "fuelType": "Gasoline",
     "pricePerDay": 52,
     "available": true,
-    "image": "/api/placeholder/400/300",
+    "image": "https://s7d2.scene7.com/is/image/kiamotors/kia_2025_sorento-ice_mep_hero-v4:XL?$LandscapeAsset_1440x730$&fmt=jpg&qlt=100,0&resMode=sharp2&op_usm=1.75,0.9,1,0&dpr=on,2",
     "description": "Three-row SUV with excellent value and comprehensive safety features."
   }
 ]

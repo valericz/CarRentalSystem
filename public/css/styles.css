@@ -1,0 +1,58 @@
+#searchSuggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+    background-color: #f8f9fa;
+}
+
+.suggestion-item strong {
+    color: #0d6efd;
+}
+
+/* 确保搜索框容器是相对定位的 */
+.search-container {
+    position: relative;
+}
+
+/* 搜索框激活状态 */
+#searchInput:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: #86b7fe;
+}
+
+/* 搜索建议滚动条样式 */
+#searchSuggestions::-webkit-scrollbar {
+    width: 6px;
+}
+
+#searchSuggestions::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#searchSuggestions::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+#searchSuggestions::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

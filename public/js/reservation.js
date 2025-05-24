@@ -210,6 +210,20 @@ function initializeForm() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     $('#startDate').val(tomorrow.toISOString().split('T')[0]);
+
+    // 初始化时禁用提交按钮
+    $('#submitBtn').prop('disabled', true).text('Please Complete All Fields');
+
+    // 加载保存的表单数据
+    loadSavedFormData();
+
+    // 初始验证所有字段
+    $('#reservationForm input').each(function () {
+        validateField($(this));
+    });
+
+    // 更新提交按钮状态
+    updateSubmitButtonState();
 }
 
 // 绑定预订页面事件
@@ -219,24 +233,37 @@ function bindReservationEvents() {
         validateField($(this));
         calculateTotalPrice();
         updateSubmitButtonState();
+        // 每次输入变化时保存表单数据
+        saveFormData();
     });
 
     // 取消按钮
-    $('#cancelBtn').on('click', function () {
+    $('#cancelBtn').on('click', function (e) {
+        e.preventDefault();
         if (confirm('Are you sure you want to cancel? All entered information will be lost.')) {
             clearFormData();
             window.location.href = '/';
         }
     });
 
-    // 表单提交 - 修复后直接提交到API
+    // 所有导航链接的点击事件
+    $('a[href="/"], a[href^="/cars"], .navbar-brand, #logo').on('click', function (e) {
+        e.preventDefault();
+        const href = $(this).attr('href');
+        // 保存表单数据
+        saveFormData();
+        // 然后跳转
+        window.location.href = href;
+    });
+
+    // 表单提交
     $('#reservationForm').off('submit').on('submit', function (e) {
         e.preventDefault();
 
         // 双重检查车辆可用性
         if (!selectedCar || !selectedCar.available) {
             alert('Sorry, this car is no longer available. Please select another vehicle.');
-            window.location.href = 'index.html';
+            window.location.href = '/';
             return;
         }
 
@@ -248,11 +275,6 @@ function bindReservationEvents() {
         submitReservationDirectly();
     });
 
-    // 表单数据自动保存
-    $('#reservationForm input').on('blur', function () {
-        saveFormData();
-    });
-
     // 页面离开时保存表单数据
     $(window).on('beforeunload', function () {
         saveFormData();
@@ -261,7 +283,6 @@ function bindReservationEvents() {
     // 页面可见性变化时重新检查可用性
     document.addEventListener('visibilitychange', function () {
         if (!document.hidden && selectedCar) {
-            // 页面重新变为可见时，检查车辆可用性
             setTimeout(() => {
                 checkCarRealTimeAvailability(selectedCar.vin);
             }, 1000);
@@ -454,14 +475,44 @@ function updateSubmitButtonState() {
         return;
     }
 
-    // 然后检查表单验证
-    const isFormValid = validateForm();
-    $('#submitBtn').prop('disabled', !isFormValid);
+    // 检查所有必填字段是否已填写且有效
+    const fields = [
+        { id: 'customerName', label: 'Name' },
+        { id: 'customerEmail', label: 'Email' },
+        { id: 'customerPhone', label: 'Phone' },
+        { id: 'driverLicense', label: 'Driver\'s License' },
+        { id: 'startDate', label: 'Start Date' },
+        { id: 'rentalDays', label: 'Rental Days' }
+    ];
 
-    if (isFormValid) {
-        $('#submitBtn').text('Submit Reservation');
+    let isValid = true;
+    let missingFields = [];
+
+    fields.forEach(field => {
+        const $field = $(`#${field.id}`);
+        const value = $field.val()?.trim() || '';
+
+        if (!value) {
+            isValid = false;
+            missingFields.push(field.label);
+        } else {
+            // 验证字段值
+            if (!validateField($field)) {
+                isValid = false;
+            }
+        }
+    });
+
+    // 更新按钮状态和文本
+    $('#submitBtn').prop('disabled', !isValid);
+    if (!isValid) {
+        if (missingFields.length > 0) {
+            $('#submitBtn').text(`Please Complete All Fields`);
+        } else {
+            $('#submitBtn').text('Please Fix Invalid Fields');
+        }
     } else {
-        $('#submitBtn').text('Complete Required Fields');
+        $('#submitBtn').text('Submit Reservation');
     }
 }
 
@@ -488,7 +539,92 @@ async function submitReservationDirectly() {
             totalPrice: calculateTotalPrice()
         };
 
-        console.log('Submitting reservation:', reservationData);
+        // 保存当前预订信息到localStorage
+        localStorage.setItem('pendingReservation', JSON.stringify(reservationData));
+
+        // 显示确认选项模态框
+        showConfirmationOptionsModal(reservationData);
+
+    } catch (error) {
+        console.error('Error preparing reservation:', error);
+        showError('Failed to prepare reservation. Please try again.');
+    } finally {
+        // 恢复按钮状态
+        $('#submitBtn').prop('disabled', false).html('Submit Reservation');
+    }
+}
+
+// 显示确认选项模态框
+function showConfirmationOptionsModal(reservationData) {
+    const modalHtml = `
+        <div class="modal fade" id="confirmationOptionsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-calendar-check me-2"></i>
+                            Reservation Options
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="reservation-summary mb-4">
+                            <h6 class="text-primary">Reservation Summary</h6>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Car:</strong> ${selectedCar.brand} ${selectedCar.model}</p>
+                                    <p class="mb-2"><strong>Start Date:</strong> ${reservationData.rentalPeriod.startDate}</p>
+                                    <p class="mb-2"><strong>Duration:</strong> ${reservationData.rentalPeriod.days} days</p>
+                                    <p class="mb-0"><strong>Total Price:</strong> $${reservationData.totalPrice}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="options-container">
+                            <div class="mb-3">
+                                <h6>Would you like to confirm now or save for later?</h6>
+                            </div>
+                            <div class="d-grid gap-3">
+                                <button type="button" class="btn btn-success confirm-now-btn" onclick="proceedWithConfirmation()">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Confirm Now
+                                </button>
+                                <button type="button" class="btn btn-secondary save-for-later-btn" onclick="saveForLater()">
+                                    <i class="fas fa-clock me-2"></i>
+                                    Save for Later
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 移除可能存在的旧模态框
+    $('#confirmationOptionsModal').remove();
+
+    // 添加新模态框到页面
+    $('body').append(modalHtml);
+
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('confirmationOptionsModal'));
+    modal.show();
+}
+
+// 立即确认预订
+async function proceedWithConfirmation() {
+    try {
+        const savedReservation = localStorage.getItem('pendingReservation');
+        if (!savedReservation) {
+            throw new Error('No pending reservation found');
+        }
+
+        const reservationData = JSON.parse(savedReservation);
+
+        // 显示加载状态
+        $('.confirm-now-btn')
+            .prop('disabled', true)
+            .html('<span class="spinner-border spinner-border-sm me-2"></span>Confirming...');
 
         // 提交到API
         const response = await fetch('/api/orders', {
@@ -500,33 +636,46 @@ async function submitReservationDirectly() {
         });
 
         const data = await response.json();
-        console.log('Server response:', data);
 
         if (data.success) {
-            // 使用新的确认流程
+            // 清除暂存的预订信息
+            localStorage.removeItem('pendingReservation');
+
+            // 隐藏选项模态框
+            $('#confirmationOptionsModal').modal('hide');
+
+            // 显示成功确认模态框
             handleOrderSubmissionSuccess(data);
         } else {
             throw new Error(data.message || 'Failed to create reservation');
         }
 
     } catch (error) {
-        console.error('Error submitting reservation:', error);
+        console.error('Error confirming reservation:', error);
+        showError('Failed to confirm reservation. Please try again.');
+    }
+}
 
-        let errorMessage = 'Failed to submit reservation. Please try again.';
-
-        if (error.response?.status === 400) {
-            errorMessage = 'This car is no longer available. Please choose another car.';
-        } else if (error.response?.status === 404) {
-            errorMessage = 'Car not found. Please select another car.';
-        } else if (error.response?.status === 500) {
-            errorMessage = 'Server error. Please try again later.';
+// 保存预订信息供后续确认
+function saveForLater() {
+    try {
+        const savedReservation = localStorage.getItem('pendingReservation');
+        if (!savedReservation) {
+            throw new Error('No pending reservation found');
         }
 
-        showError(errorMessage);
+        // 隐藏当前模态框
+        $('#confirmationOptionsModal').modal('hide');
 
-    } finally {
-        // 恢复按钮状态
-        $('#submitBtn').prop('disabled', false).html('Submit Reservation');
+        // 添加一个标记到localStorage，用于在主页显示提示
+        localStorage.setItem('showSaveSuccess', 'true');
+
+        // 直接跳转到首页
+        window.location.href = '/';
+
+    } catch (error) {
+        console.error('Error saving reservation:', error);
+        showError('Failed to save reservation details. Please try again.');
     }
 }
 
@@ -704,10 +853,14 @@ function getFormData() {
     };
 }
 
-// 保存表单数据到本地存储
+// 保存表单数据
 function saveFormData() {
     const formData = getFormData();
-    localStorage.setItem('reservationFormData', JSON.stringify(formData));
+    // 只有当至少有一个字段有值时才保存
+    if (Object.values(formData).some(value => value !== '')) {
+        localStorage.setItem('reservationFormData', JSON.stringify(formData));
+        console.log('Form data saved:', formData);
+    }
 }
 
 // 加载已保存的表单数据
@@ -716,12 +869,15 @@ function loadSavedFormData() {
     if (savedData) {
         try {
             const formData = JSON.parse(savedData);
-            $('#customerName').val(formData.customerName || '');
-            $('#customerEmail').val(formData.customerEmail || '');
-            $('#customerPhone').val(formData.customerPhone || '');
-            $('#driverLicense').val(formData.driverLicense || '');
-            $('#startDate').val(formData.startDate || '');
-            $('#rentalDays').val(formData.rentalDays || '');
+            // 只有当字段有值时才填充
+            if (formData.customerName) $('#customerName').val(formData.customerName);
+            if (formData.customerEmail) $('#customerEmail').val(formData.customerEmail);
+            if (formData.customerPhone) $('#customerPhone').val(formData.customerPhone);
+            if (formData.driverLicense) $('#driverLicense').val(formData.driverLicense);
+            if (formData.startDate) $('#startDate').val(formData.startDate);
+            if (formData.rentalDays) $('#rentalDays').val(formData.rentalDays);
+
+            console.log('Loaded saved form data:', formData);
 
             // 触发验证和价格计算
             $('#reservationForm input').each(function () {
@@ -739,9 +895,7 @@ function loadSavedFormData() {
 function clearFormData() {
     localStorage.removeItem('reservationFormData');
     $('#reservationForm')[0].reset();
-    $('#reservationForm input').removeClass('is-valid is-invalid');
-    $('#priceCalculation').hide();
-    $('#submitBtn').prop('disabled', true);
+    console.log('Form data cleared');
 }
 
 // 清除选中的车辆
