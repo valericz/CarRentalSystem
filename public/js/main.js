@@ -404,6 +404,9 @@ function initializeFilters() {
     $('#typeFilter').off('change').on('change', handleTypeFilter);
     $('#searchInput').off('input').on('input', handleSearch);
 
+    // 添加清除过滤器按钮的点击事件
+    $('#clearFilters').off('click').on('click', clearFilters);
+
     // 添加搜索框失焦事件，延迟隐藏建议框
     $('#searchInput').on('blur', function () {
         setTimeout(hideSearchSuggestions, 200);
