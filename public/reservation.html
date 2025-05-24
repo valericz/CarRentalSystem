@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation - RentACar</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=2025012402">
+
+    <style>
+        /* 临时内嵌样式确保紫色主题显示 */
+        :root {
+            --primary-color: #5c509c;
+            --primary-dark: #382d72;
+            --primary-light: #a080e1;
+            --secondary-color: #b7c2c6;
+            --accent-color: #e5ccf4;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e5ccf4 100%);
+            min-height: 100vh;
+            color: #382d72;
+        }
+
+        .navbar-dark {
+            background: linear-gradient(135deg, #382d72 0%, #5c509c 100%) !important;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #5c509c 0%, #a080e1 100%);
+            border: none;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #382d72 0%, #5c509c 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(92, 80, 156, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+        }
+
+        .card {
+            border: 2px solid #e5ccf4;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(92, 80, 156, 0.1);
+        }
+
+        .card-header.bg-primary {
+            background: linear-gradient(135deg, #5c509c 0%, #a080e1 100%) !important;
+            border-bottom: 2px solid #e5ccf4;
+        }
+
+        .card-header.bg-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+        }
+
+        .form-control:focus {
+            border-color: #5c509c;
+            box-shadow: 0 0 0 0.2rem rgba(92, 80, 156, 0.25);
+        }
+
+        .text-primary {
+            color: #5c509c !important;
+        }
+
+        .badge.bg-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+        }
+
+        .badge.bg-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%) !important;
+        }
+
+        .badge.bg-primary {
+            background: linear-gradient(135deg, #5c509c 0%, #a080e1 100%) !important;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e5ccf4 0%, #f0e6ff 100%);
+            border-left: 4px solid #a080e1;
+            color: #382d72;
+        }
+
+        #priceCalculation {
+            background: linear-gradient(135deg, #e5ccf4 0%, #f0e6ff 100%);
+            border-left: 4px solid #5c509c;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-white" href="/" id="logo">
+                <i class="fas fa-car me-2" style="color: #e5ccf4;"></i>RentACar
+            </a>
+            <div class="d-flex">
+                <a href="/" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Cars
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mt-4">
+        <!-- No Car Selected Message -->
+        <div class="alert alert-warning text-center" id="noCarSelected" style="display:none;">
+            <h4><i class="fas fa-exclamation-triangle me-2"></i>No Car Selected</h4>
+            <p>Please select a car from our homepage to make a reservation.</p>
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-car me-1"></i>Browse Cars
+            </a>
+        </div>
+
+        <!-- Car Details Section -->
+        <div class="row" id="reservationContent" style="display:none;">
+            <!-- Car Information -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="fas fa-car me-2"></i>Selected Car</h4>
+                    </div>
+                    <div class="card-body" id="carDetails">
+                        <!-- Car details will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reservation Form -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Reservation Form</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Car Unavailable Message -->
+                        <div class="alert alert-danger" id="carUnavailable" style="display:none;">
+                            <h5><i class="fas fa-times-circle me-2"></i>Car Unavailable</h5>
+                            <p>Sorry, this car is no longer available for rental. Please choose another car.</p>
+                            <a href="/" class="btn btn-primary">Choose Another Car</a>
+                        </div>
+
+                        <!-- Reservation Form -->
+                        <form id="reservationForm" style="display:none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="customerName" class="form-label">Full Name *</label>
+                                    <input type="text" class="form-control" id="customerName" required>
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="customerPhone" class="form-label">Phone Number *</label>
+                                    <input type="tel" class="form-control" id="customerPhone" required>
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="customerEmail" class="form-label">Email Address *</label>
+                                <input type="email" class="form-control" id="customerEmail" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="driverLicense" class="form-label">Driver's License Number *</label>
+                                <input type="text" class="form-control" id="driverLicense" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="startDate" class="form-label">Start Date *</label>
+                                    <input type="date" class="form-control" id="startDate" required>
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="rentalDays" class="form-label">Rental Days *</label>
+                                    <input type="number" class="form-control" id="rentalDays" min="1" max="30" required>
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                            </div>
+
+                            <!-- Price Calculation -->
+                            <div class="card mb-3" id="priceCalculation" style="display:none;">
+                                <div class="card-body">
+                                    <h5 class="card-title" style="color: #382d72;">Rental Summary</h5>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Price per day:</span>
+                                        <span id="pricePerDay" class="fw-bold">$0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Number of days:</span>
+                                        <span id="totalDays" class="fw-bold">0</span>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="h5">Total Price:</span>
+                                        <span id="totalPrice" class="h5 text-success fw-bold">$0</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Form Buttons -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-secondary" id="cancelBtn">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                                    <i class="fas fa-check me-1"></i>Submit Reservation
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Confirmation Modal -->
+        <div class="modal fade" id="confirmationModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Confirm Your Reservation</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Please review your reservation details before confirming.
+                        </div>
+                        <div id="confirmationDetails"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-success" id="confirmReservation">
+                            <i class="fas fa-check me-1"></i>Confirm Reservation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-5 py-4 text-center"
+        style="background: linear-gradient(135deg, #382d72 0%, #5c509c 100%); color: white;">
+        <div class="container">
+            <p class="mb-0">&copy; 2025 RentACar. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- 确保加载了必要的脚本 -->
+    <script src="js/main.js"></script>
+    <script src="js/reservation.js"></script>
+    <!-- 可选：添加庆祝效果 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</body>
+
+</html>

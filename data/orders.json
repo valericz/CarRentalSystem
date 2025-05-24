@@ -1,0 +1,155 @@
+[
+  {
+    "id": "1703856000123",
+    "vin": "4HGCM82633A345678",
+    "customerInfo": {
+      "name": "John Smith",
+      "email": "john.smith@email.com",
+      "phone": "+1-555-123-4567",
+      "driverLicense": "D123456789"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-01-15",
+      "days": 5
+    },
+    "totalPrice": 425,
+    "status": "confirmed",
+    "createdAt": "2025-01-10T08:30:00.123Z"
+  },
+  {
+    "id": "1703942400456",
+    "vin": "8HGCM82633A890123",
+    "customerInfo": {
+      "name": "Sarah Johnson",
+      "email": "sarah.johnson@email.com",
+      "phone": "+1-555-987-6543",
+      "driverLicense": "D987654321"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-01-20",
+      "days": 3
+    },
+    "totalPrice": 210,
+    "status": "confirmed",
+    "createdAt": "2025-01-11T14:20:00.456Z"
+  },
+  {
+    "id": "1704028800789",
+    "vin": "EHGCM82633A456789",
+    "customerInfo": {
+      "name": "Michael Brown",
+      "email": "michael.brown@email.com",
+      "phone": "+1-555-456-7890",
+      "driverLicense": "D456789123"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-01-25",
+      "days": 7
+    },
+    "totalPrice": 665,
+    "status": "pending",
+    "createdAt": "2025-01-12T10:15:00.789Z"
+  },
+  {
+    "id": "1747917888997",
+    "vin": "1HGCM82633A123456",
+    "customerInfo": {
+      "name": "WEIHUA ZHANG",
+      "email": "valerieznb@gmail.com",
+      "phone": "0478182016",
+      "driverLicense": "SDsdfafdad"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-05-23",
+      "days": 3
+    },
+    "totalPrice": 135,
+    "status": "pending",
+    "createdAt": "2025-05-22T12:44:48.997Z"
+  },
+  {
+    "id": "1747919945600",
+    "vin": "2HGCM82633A654321",
+    "customerInfo": {
+      "name": "WEIHUA ZHANG",
+      "email": "valerieznb@gmail.com",
+      "phone": "0478182016",
+      "driverLicense": "SDsdfafdad"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-05-23",
+      "days": 2
+    },
+    "totalPrice": 84,
+    "status": "pending",
+    "createdAt": "2025-05-22T13:19:05.600Z"
+  },
+  {
+    "id": "1747919987711",
+    "vin": "3HGCM82633A789012",
+    "customerInfo": {
+      "name": "WEIHUA ZHANG",
+      "email": "valerieznb@gmail.com",
+      "phone": "0478182016",
+      "driverLicense": "SDsdfafdad"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-05-23",
+      "days": 4
+    },
+    "totalPrice": 260,
+    "status": "pending",
+    "createdAt": "2025-05-22T13:19:47.711Z"
+  },
+  {
+    "id": "1747920895297",
+    "vin": "5HGCM82633A901234",
+    "customerInfo": {
+      "name": "WEIHUA ZHANG",
+      "email": "valerieznb@gmail.com",
+      "phone": "0478182016",
+      "driverLicense": "SDsdfafdad"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-05-30",
+      "days": 6
+    },
+    "totalPrice": 330,
+    "status": "pending",
+    "createdAt": "2025-05-22T13:34:55.297Z"
+  },
+  {
+    "id": "1747927341909",
+    "vin": "6HGCM82633A567890",
+    "customerInfo": {
+      "name": "Valerie Zhang",
+      "email": "valerieznb@gmail.com",
+      "phone": "0478182016",
+      "driverLicense": "SDsdfafdad"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-05-23",
+      "days": 1
+    },
+    "totalPrice": 75,
+    "status": "pending",
+    "createdAt": "2025-05-22T15:22:21.909Z"
+  },
+  {
+    "id": "1747928424276",
+    "vin": "9HGCM82633A456789",
+    "customerInfo": {
+      "name": "WEIHUA ZHANG",
+      "email": "valerieznb@gmail.com",
+      "phone": "0478182016",
+      "driverLicense": "SDsdfafdad"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-05-23",
+      "days": 3
+    },
+    "totalPrice": 180,
+    "status": "pending",
+    "createdAt": "2025-05-22T15:40:24.276Z"
+  }
+]
