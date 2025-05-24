@@ -151,5 +151,22 @@
     "totalPrice": 180,
     "status": "pending",
     "createdAt": "2025-05-22T15:40:24.276Z"
+  },
+  {
+    "id": "1748116546384",
+    "vin": "BHGCM82633A678901",
+    "customerInfo": {
+      "name": "WEIHUA ZHANG",
+      "email": "valerieznb@gmail.com",
+      "phone": "0478182016",
+      "driverLicense": "SDsdfafdad"
+    },
+    "rentalPeriod": {
+      "startDate": "2025-05-25",
+      "days": 2
+    },
+    "totalPrice": 96,
+    "status": "pending",
+    "createdAt": "2025-05-24T19:55:46.384Z"
   }
 ]

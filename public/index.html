@@ -61,6 +61,56 @@
         .text-primary {
             color: #5c509c !important;
         }
+
+        /* 搜索建议样式 */
+        .search-container {
+            position: relative;
+        }
+
+        #searchSuggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 20px rgba(92, 80, 156, 0.15);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .suggestions-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .suggestion-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f3f4;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .suggestion-item:hover,
+        .suggestion-item.selected {
+            background-color: #f8f9fa;
+            color: var(--primary-color);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item i {
+            color: #6c757d;
+            width: 16px;
+        }
     </style>
 </head>
 
@@ -81,13 +131,17 @@
 
     <!-- Main Content -->
     <main class="container mt-4">
+        <!-- Search Section -->
         <section class="mb-4">
             <div class="card p-4">
                 <h2 class="mb-3 text-primary"><i class="fas fa-search me-2"></i>Find Your Perfect Car</h2>
                 <div class="row g-2 align-items-center">
                     <div class="col-md-10 col-9">
-                        <input type="text" id="searchInput" class="form-control form-control-lg"
-                            placeholder="Search by brand, model, or type...">
+                        <div class="search-container">
+                            <input type="text" id="searchInput" class="form-control form-control-lg"
+                                placeholder="Search by brand, model, or type...">
+                            <div id="searchSuggestions" class="suggestions-dropdown" style="display: none;"></div>
+                        </div>
                     </div>
                     <div class="col-md-2 col-3">
                         <button id="searchButton" class="btn btn-primary btn-lg w-100">
@@ -97,6 +151,40 @@
                 </div>
             </div>
         </section>
+
+        <!-- Filters Section -->
+        <section class="mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Search Filters</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="typeFilter" class="form-label">Car Type</label>
+                            <select class="form-select" id="typeFilter">
+                                <option value="">All Types</option>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="brandFilter" class="form-label">Brand</label>
+                            <select class="form-select" id="brandFilter">
+                                <option value="">All Brands</option>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="button" class="btn btn-secondary w-100" id="clearFilters">
+                                <i class="fas fa-times me-1"></i>Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cars Grid -->
         <section class="row cars-grid" id="carsContainer">
             <!-- Cars will be dynamically loaded here as cards -->
         </section>

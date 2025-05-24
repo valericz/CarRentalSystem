@@ -194,7 +194,7 @@
                             </div>
 
                             <!-- Price Calculation -->
-                            <div class="card mb-3" id="priceCalculation" style="display:none;">
+                            <div class="card mb-3" id="priceCalculation">
                                 <div class="card-body">
                                     <h5 class="card-title" style="color: #382d72;">Rental Summary</h5>
                                     <div class="d-flex justify-content-between">
@@ -272,6 +272,82 @@
     <script src="js/reservation.js"></script>
     <!-- 可选：添加庆祝效果 -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <div class="modal fade" id="orderConfirmationModal" tabindex="-1" aria-labelledby="orderConfirmationModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="orderConfirmationModalLabel">
+                        🎉 Booking Created Successfully!
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Order Information</h6>
+                            <p><strong>Order ID:</strong> <span id="modalOrderId"></span></p>
+                            <p><strong>Vehicle:</strong> <span id="modalCarInfo"></span></p>
+                            <p><strong>Rental Period:</strong> <span id="modalRentalPeriod"></span></p>
+                            <p><strong>Total Price:</strong> <span id="modalTotalPrice"
+                                    class="text-success fs-4"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Customer Information</h6>
+                            <p><strong>Name:</strong> <span id="modalCustomerName"></span></p>
+                            <p><strong>Email:</strong> <span id="modalCustomerEmail"></span></p>
+                            <p><strong>Phone:</strong> <span id="modalCustomerPhone"></span></p>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <h6>⚠️ Important Notice</h6>
+                        <p>Your booking has been created but not yet confirmed. Please click "Confirm Order" below to
+                            complete your reservation.</p>
+                        <p><strong>Current Status:</strong> <span class="badge bg-warning" id="modalStatus">Pending
+                                Confirmation</span></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Confirm Later
+                    </button>
+                    <button type="button" class="btn btn-success" id="confirmOrderBtn">
+                        ✅ Confirm Order
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Success Modal -->
+    <div class="modal fade" id="orderSuccessModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">🎊 Order Confirmed Successfully!</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4>Congratulations! Your order is confirmed</h4>
+                    <p>You will receive a confirmation email shortly.</p>
+                    <div class="alert alert-success">
+                        <strong>Order Status:</strong> <span class="badge bg-success">Confirmed</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='index.html'">
+                        Browse More Cars
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

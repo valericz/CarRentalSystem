@@ -339,9 +339,7 @@ function calculateTotalPrice() {
 // 更新提交按钮状态
 function updateSubmitButtonState() {
     const isFormValid = validateForm();
-    const hasPriceCalculation = $('#priceCalculation').is(':visible');
-
-    $('#submitBtn').prop('disabled', !(isFormValid && hasPriceCalculation));
+    $('#submitBtn').prop('disabled', !isFormValid); // 只检查表单验证
 }
 
 // 显示确认模态框
@@ -628,4 +626,151 @@ function formatDate(dateString) {
         month: 'long',
         day: 'numeric'
     });
+}
+
+// Show order confirmation modal
+function showOrderConfirmationModal(orderData) {
+    // Populate modal with order data
+    $('#modalOrderId').text('#' + orderData.id);
+    $('#modalCarInfo').text(orderData.selectedCar?.make + ' ' + orderData.selectedCar?.model || 'Selected Vehicle');
+    $('#modalRentalPeriod').text(orderData.rentalPeriod.startDate + ' (' + orderData.rentalPeriod.days + ' days)');
+    $('#modalTotalPrice').text('$' + orderData.totalPrice);
+
+    $('#modalCustomerName').text(orderData.customerInfo.name);
+    $('#modalCustomerEmail').text(orderData.customerInfo.email);
+    $('#modalCustomerPhone').text(orderData.customerInfo.phone);
+
+    // Store order ID for confirmation
+    $('#confirmOrderBtn').data('orderId', orderData.id);
+
+    // Show modal
+    $('#orderConfirmationModal').modal('show');
+}
+
+// Handle order confirmation
+$(document).on('click', '#confirmOrderBtn', function () {
+    const orderId = $(this).data('orderId');
+    const $btn = $(this);
+
+    // Show loading state
+    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Confirming...');
+
+    // Call confirmation API
+    fetch(`/api/orders/${orderId}/confirm`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Hide confirmation modal
+                $('#orderConfirmationModal').modal('hide');
+
+                // Show success modal
+                setTimeout(() => {
+                    $('#orderSuccessModal').modal('show');
+                }, 500);
+
+                console.log('Order confirmed successfully:', data);
+            } else {
+                throw new Error(data.message || 'Failed to confirm order');
+            }
+        })
+        .catch(error => {
+            console.error('Error confirming order:', error);
+            alert('Failed to confirm order. Please try again.');
+        })
+        .finally(() => {
+            // Reset button state
+            $btn.prop('disabled', false).html('✅ Confirm Order');
+        });
+});
+
+// Handle order submission success
+function handleOrderSubmissionSuccess(response) {
+    if (response.success) {
+        // Hide any existing modals
+        $('.modal').modal('hide');
+
+        // Show confirmation modal instead of alert
+        showOrderConfirmationModal(response.order);
+    } else {
+        alert('Failed to create order: ' + (response.message || 'Unknown error'));
+    }
+}
+
+// Enhanced form validation with better error messages
+function validateForm() {
+    let isValid = true;
+
+    // 使用正确的字段ID
+    const fields = {
+        customerName: ($('#customerName').val() || '').trim(),    // ✅ 正确ID
+        customerEmail: ($('#customerEmail').val() || '').trim(),  // ✅ 正确ID
+        customerPhone: ($('#customerPhone').val() || '').trim(),  // ✅ 正确ID
+        driverLicense: ($('#driverLicense').val() || '').trim(),  // ✅ 正确ID
+        startDate: $('#startDate').val() || '',
+        rentalDays: $('#rentalDays').val() || ''
+    };
+
+    console.log('Validating form fields:', fields);
+
+    // 检查所有必填字段是否为空
+    Object.keys(fields).forEach(key => {
+        if (!fields[key]) {
+            console.log(`${key} is empty`);
+            isValid = false;
+        }
+    });
+
+    // 特定字段验证
+    if (fields.customerName && fields.customerName.length < 2) {
+        console.log('Name too short');
+        isValid = false;
+    }
+
+    if (fields.customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.customerEmail)) {
+        console.log('Email format invalid');
+        isValid = false;
+    }
+
+    if (fields.customerPhone && fields.customerPhone.length < 10) {
+        console.log('Phone too short');
+        isValid = false;
+    }
+
+    if (fields.startDate) {
+        const today = new Date().toISOString().split('T')[0];
+        if (fields.startDate < today) {
+            console.log('Start date is in the past');
+            isValid = false;
+        }
+    }
+
+    const days = parseInt(fields.rentalDays);
+    if (fields.rentalDays && (!days || days < 1 || days > 30)) {
+        console.log('Invalid rental days');
+        isValid = false;
+    }
+
+    console.log('🎯 Validation result:', isValid);
+    return isValid;
+}
+
+// Show validation errors
+function showValidationErrors(errors) {
+    let errorHtml = '<div class="alert alert-danger"><ul class="mb-0">';
+    errors.forEach(error => {
+        errorHtml += `<li>${error}</li>`;
+    });
+    errorHtml += '</ul></div>';
+
+    $('#validationErrors').html(errorHtml).show();
+}
+
+// Hide validation errors
+function hideValidationErrors() {
+    $('#validationErrors').hide();
 }

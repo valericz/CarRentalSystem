@@ -138,7 +138,7 @@
     "mileage": 12000,
     "fuelType": "Gasoline",
     "pricePerDay": 48,
-    "available": true,
+    "available": false,
     "image": "/api/placeholder/400/300",
     "description": "Compact SUV with modern design and comprehensive warranty coverage."
   },

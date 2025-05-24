@@ -38,11 +38,73 @@ const writeDataFile = (filename, data) => {
     }
 };
 
+// Helper functions for data access
+const getCars = () => readDataFile('cars.json');
+const getOrders = () => readDataFile('orders.json');
+const saveOrders = (orders) => writeDataFile('orders.json', orders);
+
+// Check car availability for given dates
+function isCarAvailable(vin, startDate, endDate) {
+    const orders = getOrders();
+
+    const requestStart = new Date(startDate);
+    const requestEnd = new Date(endDate);
+
+    // Check for conflicts with existing bookings
+    const conflicts = orders.filter(order => {
+        if (order.vin !== vin || order.status === 'cancelled') {
+            return false;
+        }
+
+        const existingStart = new Date(order.rentalPeriod.startDate);
+        const existingEnd = new Date(existingStart);
+        existingEnd.setDate(existingEnd.getDate() + order.rentalPeriod.days);
+
+        // Check if dates overlap
+        return (requestStart < existingEnd && requestEnd > existingStart);
+    });
+
+    return conflicts.length === 0;
+}
+
+// API endpoint to check availability
+app.post('/api/cars/check-availability', (req, res) => {
+    try {
+        const { vin, startDate, days } = req.body;
+
+        if (!vin || !startDate || !days) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: vin, startDate, days'
+            });
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(start);
+        end.setDate(end.getDate() + parseInt(days));
+
+        const available = isCarAvailable(vin, start, end);
+
+        res.json({
+            success: true,
+            available: available,
+            message: available ? 'Car is available for the requested dates' : 'Car is not available for the requested dates'
+        });
+
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error checking car availability'
+        });
+    }
+});
+
 // API路由
 
 // 获取所有车辆 - 支持搜索和筛选
 app.get('/api/cars', (req, res) => {
-    let cars = readDataFile('cars.json');
+    let cars = getCars();
     const { search, type, brand } = req.query;
 
     // 搜索功能
@@ -74,7 +136,7 @@ app.get('/api/suggestions', (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
 
-    const cars = readDataFile('cars.json');
+    const cars = getCars();
     const suggestions = new Set();
     const queryLower = q.toLowerCase();
 
@@ -98,7 +160,7 @@ app.get('/api/suggestions', (req, res) => {
 
 // 获取单个车辆详情
 app.get('/api/cars/:vin', (req, res) => {
-    const cars = readDataFile('cars.json');
+    const cars = getCars();
     const car = cars.find(c => c.vin === req.params.vin);
 
     if (!car) {
@@ -108,46 +170,96 @@ app.get('/api/cars/:vin', (req, res) => {
     res.json(car);
 });
 
-// 创建订单
+// Replace existing order creation endpoint with enhanced version
 app.post('/api/orders', (req, res) => {
-    const { vin, customerInfo, rentalPeriod } = req.body;
+    try {
+        console.log('Creating new order:', req.body);
 
-    // 验证车辆是否可用
-    const cars = readDataFile('cars.json');
-    const car = cars.find(c => c.vin === vin);
+        const { vin, customerInfo, rentalPeriod, totalPrice } = req.body;
 
-    if (!car || !car.available) {
-        return res.status(400).json({ error: 'Car not available' });
-    }
+        // Validate required fields
+        if (!vin || !customerInfo || !rentalPeriod || !totalPrice) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required order information'
+            });
+        }
 
-    // 创建订单
-    const orders = readDataFile('orders.json');
-    const order = {
-        id: Date.now().toString(),
-        vin,
-        customerInfo,
-        rentalPeriod,
-        totalPrice: car.pricePerDay * rentalPeriod.days,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-    };
+        // Check car availability first
+        const startDate = new Date(rentalPeriod.startDate);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + parseInt(rentalPeriod.days));
 
-    orders.push(order);
+        if (!isCarAvailable(vin, startDate, endDate)) {
+            return res.status(409).json({
+                success: false,
+                message: 'Sorry, this car is not available for the selected dates. Please choose different dates.'
+            });
+        }
 
-    // 更新车辆可用性
-    car.available = false;
+        // Find the car details
+        const cars = getCars();
+        const selectedCar = cars.find(car => car.vin === vin);
 
-    // 保存数据
-    if (writeDataFile('orders.json', orders) && writeDataFile('cars.json', cars)) {
-        res.json({ success: true, order });
-    } else {
-        res.status(500).json({ error: 'Failed to create order' });
+        if (!selectedCar) {
+            return res.status(404).json({
+                success: false,
+                message: 'Car not found'
+            });
+        }
+
+        // Create order
+        const order = {
+            id: Date.now().toString(),
+            vin: vin,
+            selectedCar: selectedCar,
+            customerInfo: {
+                name: customerInfo.name?.trim(),
+                email: customerInfo.email?.trim(),
+                phone: customerInfo.phone?.trim(),
+                driverLicense: customerInfo.driverLicense?.trim()
+            },
+            rentalPeriod: {
+                startDate: rentalPeriod.startDate,
+                days: parseInt(rentalPeriod.days)
+            },
+            totalPrice: parseFloat(totalPrice),
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        };
+
+        // Save order
+        const orders = getOrders();
+        orders.push(order);
+
+        if (!saveOrders(orders)) {
+            throw new Error('Failed to save order');
+        }
+
+        // Update car availability
+        selectedCar.available = false;
+        writeDataFile('cars.json', cars);
+
+        console.log('Order created successfully:', order.id);
+
+        res.json({
+            success: true,
+            message: 'Order created successfully',
+            order: order
+        });
+
+    } catch (error) {
+        console.error('Error creating order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create order'
+        });
     }
 });
 
 // 确认订单
 app.put('/api/orders/:id/confirm', (req, res) => {
-    const orders = readDataFile('orders.json');
+    const orders = getOrders();
     const order = orders.find(o => o.id === req.params.id);
 
     if (!order) {
@@ -156,7 +268,7 @@ app.put('/api/orders/:id/confirm', (req, res) => {
 
     order.status = 'confirmed';
 
-    if (writeDataFile('orders.json', orders)) {
+    if (saveOrders(orders)) {
         res.json({ success: true, order });
     } else {
         res.status(500).json({ error: 'Failed to confirm order' });
@@ -165,7 +277,7 @@ app.put('/api/orders/:id/confirm', (req, res) => {
 
 // 获取筛选选项
 app.get('/api/filters', (req, res) => {
-    const cars = readDataFile('cars.json');
+    const cars = getCars();
     const types = [...new Set(cars.map(car => car.type))];
     const brands = [...new Set(cars.map(car => car.brand))];
 
