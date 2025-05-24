@@ -179,17 +179,16 @@ function bindReservationEvents() {
         }
     });
 
-    // 表单提交
+    // 表单提交 - 修复后直接提交到API
     $('#reservationForm').on('submit', function (e) {
         e.preventDefault();
-        if (validateForm()) {
-            showConfirmationModal();
-        }
-    });
 
-    // 确认预订
-    $('#confirmReservation').on('click', function () {
-        submitReservation();
+        if (!validateForm()) {
+            return;
+        }
+
+        // 直接调用提交函数，不显示旧的确认框
+        submitReservationDirectly();
     });
 
     // 表单数据自动保存
@@ -304,18 +303,62 @@ function validateField($field) {
     return isValid;
 }
 
-// 验证整个表单
+// 验证整个表单 - 修复后的版本
 function validateForm() {
-    let isFormValid = true;
+    let isValid = true;
 
-    // 验证所有必填字段
-    $('#reservationForm input[required]').each(function () {
-        if (!validateField($(this))) {
-            isFormValid = false;
+    // 使用正确的字段ID
+    const fields = {
+        customerName: ($('#customerName').val() || '').trim(),
+        customerEmail: ($('#customerEmail').val() || '').trim(),
+        customerPhone: ($('#customerPhone').val() || '').trim(),
+        driverLicense: ($('#driverLicense').val() || '').trim(),
+        startDate: $('#startDate').val() || '',
+        rentalDays: $('#rentalDays').val() || ''
+    };
+
+    console.log('Validating form fields:', fields);
+
+    // 检查所有必填字段是否为空
+    Object.keys(fields).forEach(key => {
+        if (!fields[key]) {
+            console.log(`${key} is empty`);
+            isValid = false;
         }
     });
 
-    return isFormValid;
+    // 特定字段验证
+    if (fields.customerName && fields.customerName.length < 2) {
+        console.log('Name too short');
+        isValid = false;
+    }
+
+    if (fields.customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.customerEmail)) {
+        console.log('Email format invalid');
+        isValid = false;
+    }
+
+    if (fields.customerPhone && fields.customerPhone.length < 10) {
+        console.log('Phone too short');
+        isValid = false;
+    }
+
+    if (fields.startDate) {
+        const today = new Date().toISOString().split('T')[0];
+        if (fields.startDate < today) {
+            console.log('Start date is in the past');
+            isValid = false;
+        }
+    }
+
+    const days = parseInt(fields.rentalDays);
+    if (fields.rentalDays && (!days || days < 1 || days > 30)) {
+        console.log('Invalid rental days');
+        isValid = false;
+    }
+
+    console.log('🎯 Validation result:', isValid);
+    return isValid;
 }
 
 // 计算总价格
@@ -339,42 +382,15 @@ function calculateTotalPrice() {
 // 更新提交按钮状态
 function updateSubmitButtonState() {
     const isFormValid = validateForm();
-    $('#submitBtn').prop('disabled', !isFormValid); // 只检查表单验证
+    $('#submitBtn').prop('disabled', !isFormValid);
 }
 
-// 显示确认模态框
-function showConfirmationModal() {
-    const formData = getFormData();
-    const totalPrice = calculateTotalPrice();
-
-    const confirmationHtml = `
-        <div class="confirmation-details">
-            <h6>Customer Information:</h6>
-            <p><strong>Name:</strong> ${formData.customerName}</p>
-            <p><strong>Email:</strong> ${formData.customerEmail}</p>
-            <p><strong>Phone:</strong> ${formData.customerPhone}</p>
-            
-            <h6 class="mt-3">Rental Details:</h6>
-            <p><strong>Car:</strong> ${selectedCar.brand} ${selectedCar.model}</p>
-            <p><strong>Start Date:</strong> ${new Date(formData.startDate).toLocaleDateString()}</p>
-            <p><strong>Rental Period:</strong> ${formData.rentalDays} days</p>
-            <p><strong>Total Price:</strong> <span class="text-success fw-bold">$${totalPrice}</span></p>
-        </div>
-    `;
-
-    $('#confirmationDetails').html(confirmationHtml);
-
-    const modal = new bootstrap.Modal($('#confirmationModal')[0]);
-    modal.show();
-}
-
-// 提交预订 - 增强版
-async function submitReservation() {
+// 直接提交预订 - 新的提交函数
+async function submitReservationDirectly() {
     try {
-        // 禁用确认按钮防止重复提交
-        $('#confirmReservation').prop('disabled', true).html(
-            '<span class="spinner-border spinner-border-sm me-1"></span>Processing...'
-        );
+        // 显示加载状态
+        const $submitBtn = $('#submitBtn');
+        $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Creating Reservation...');
 
         const formData = getFormData();
         const reservationData = {
@@ -388,161 +404,123 @@ async function submitReservation() {
             rentalPeriod: {
                 startDate: formData.startDate,
                 days: parseInt(formData.rentalDays)
-            }
+            },
+            totalPrice: calculateTotalPrice()
         };
 
         console.log('Submitting reservation:', reservationData);
 
-        const response = await $.ajax({
-            url: '/api/orders',
+        // 提交到API
+        const response = await fetch('/api/orders', {
             method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(reservationData),
-            timeout: 10000 // 10秒超时
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(reservationData)
         });
 
-        console.log('Server response:', response);
+        const data = await response.json();
+        console.log('Server response:', data);
 
-        if (response.success) {
-            // 预订成功
-            $('#confirmationModal').modal('hide');
-            showReservationSuccess(response.order);
-            clearFormData();
-            clearSelectedCar();
+        if (data.success) {
+            // 使用新的确认流程
+            handleOrderSubmissionSuccess(data);
         } else {
-            throw new Error(response.error || 'Failed to create reservation');
+            throw new Error(data.message || 'Failed to create reservation');
         }
 
     } catch (error) {
         console.error('Error submitting reservation:', error);
-        $('#confirmationModal').modal('hide');
 
         let errorMessage = 'Failed to submit reservation. Please try again.';
 
-        if (error.status === 400) {
+        if (error.response?.status === 400) {
             errorMessage = 'This car is no longer available. Please choose another car.';
-            // 3秒后跳转到首页
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 3000);
-        } else if (error.status === 404) {
+        } else if (error.response?.status === 404) {
             errorMessage = 'Car not found. Please select another car.';
-        } else if (error.status === 500) {
+        } else if (error.response?.status === 500) {
             errorMessage = 'Server error. Please try again later.';
-        } else if (error.status === 0) {
-            errorMessage = 'Network error. Please check your connection.';
         }
 
         showError(errorMessage);
 
     } finally {
-        // 恢复确认按钮
-        $('#confirmReservation').prop('disabled', false).html(
-            '<i class="fas fa-check me-1"></i>Confirm Reservation'
-        );
+        // 恢复按钮状态
+        $('#submitBtn').prop('disabled', false).html('Submit Reservation');
     }
 }
 
-// 显示预订成功消息
-function showReservationSuccess(order) {
-    const successHtml = `
-        <!-- Bootstrap和自定义CSS -->
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link rel="stylesheet" href="css/style.css">
-        
-        <body style="background: linear-gradient(135deg, #f8f9fa 0%, #e5ccf4 100%); min-height: 100vh;">
-            <header class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #382d72 0%, #5c509c 100%) !important;">
-                <div class="container">
-                    <a class="navbar-brand fw-bold text-white" href="/" style="text-decoration: none;">
-                        <i class="fas fa-car me-2" style="color: #e5ccf4;"></i>RentACar
-                    </a>
-                </div>
-            </header>
-            
-            <main class="container mt-4">
-                <div class="row justify-content-center">
-                    <div class="col-md-10">
-                        <div class="card shadow-lg border-0" style="border: 2px solid #e5ccf4; background: white;">
-                            <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;">
-                                <h3><i class="fas fa-check-circle me-2"></i>Reservation Confirmed!</h3>
-                            </div>
-                            <div class="card-body text-center p-4">
-                                <div class="mb-4">
-                                    <i class="fas fa-car" style="color: #28a745; font-size: 4rem;"></i>
-                                </div>
-                                
-                                <h4 style="color: #28a745;" class="mb-4">Thank you for your reservation!</h4>
-                                
-                                <div class="reservation-details rounded p-4 mb-4" style="background: linear-gradient(135deg, #e5ccf4 0%, #f0e6ff 100%); border: 1px solid #5c509c;">
-                                    <div class="row">
-                                        <div class="col-md-6 text-start">
-                                            <p><strong>Order ID:</strong> <span class="badge" style="background: linear-gradient(135deg, #5c509c 0%, #a080e1 100%);">${order.id}</span></p>
-                                            <p><strong>Car:</strong> ${selectedCar.brand} ${selectedCar.model}</p>
-                                            <p><strong>Start Date:</strong> ${new Date(order.rentalPeriod.startDate).toLocaleDateString()}</p>
-                                        </div>
-                                        <div class="col-md-6 text-start">
-                                            <p><strong>Rental Period:</strong> ${order.rentalPeriod.days} days</p>
-                                            <p><strong>Total Amount:</strong> <span style="color: #28a745; font-weight: bold; font-size: 1.2rem;">${order.totalPrice}</span></p>
-                                            <p><strong>Status:</strong> <span class="badge" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">Pending Confirmation</span></p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="alert" style="background: linear-gradient(135deg, #e5ccf4 0%, #f0e6ff 100%); border-left: 4px solid #a080e1; color: #382d72;">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Next Steps:</strong><br>
-                                    • You will receive a confirmation email shortly<br>
-                                    • Please bring your driver's license when picking up the car<br>
-                                    • Our team will contact you within 24 hours
-                                </div>
-                                
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                                    <button class="btn btn-lg me-2" onclick="window.print()" 
-                                            style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; color: white;">
-                                        <i class="fas fa-print me-1"></i>Print Receipt
-                                    </button>
-                                    <button class="btn btn-lg" onclick="window.location.href='/'"
-                                            style="background: linear-gradient(135deg, #5c509c 0%, #a080e1 100%); border: none; color: white;">
-                                        <i class="fas fa-home me-1"></i>Back to Homepage
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-            
-            <!-- 添加悬停效果 -->
-            <style>
-                .btn:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                    transition: all 0.3s ease;
-                }
-                .card:hover {
-                    transform: translateY(-5px);
-                    transition: all 0.3s ease;
-                }
-            </style>
-        </body>
-    `;
+// 显示订单确认模态框
+function showOrderConfirmationModal(orderData) {
+    // 填充模态框数据
+    $('#modalOrderId').text('#' + orderData.id);
+    $('#modalCarInfo').text((orderData.selectedCar?.brand || selectedCar.brand) + ' ' + (orderData.selectedCar?.model || selectedCar.model));
+    $('#modalRentalPeriod').text(orderData.rentalPeriod.startDate + ' (' + orderData.rentalPeriod.days + ' days)');
+    $('#modalTotalPrice').text('$' + orderData.totalPrice);
 
-    // 替换整个页面内容
-    document.open();
-    document.write(successHtml);
-    document.close();
+    $('#modalCustomerName').text(orderData.customerInfo.name);
+    $('#modalCustomerEmail').text(orderData.customerInfo.email);
+    $('#modalCustomerPhone').text(orderData.customerInfo.phone);
 
-    // 添加庆祝效果
-    setTimeout(() => {
-        if (typeof confetti !== 'undefined') {
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 }
-            });
+    // 存储订单ID用于确认
+    $('#confirmOrderBtn').data('orderId', orderData.id);
+
+    // 显示模态框
+    $('#orderConfirmationModal').modal('show');
+}
+
+// 处理订单确认
+$(document).on('click', '#confirmOrderBtn', function () {
+    const orderId = $(this).data('orderId');
+    const $btn = $(this);
+
+    // 显示加载状态
+    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Confirming...');
+
+    // 调用确认API
+    fetch(`/api/orders/${orderId}/confirm`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
         }
-    }, 500);
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 隐藏确认模态框
+                $('#orderConfirmationModal').modal('hide');
+
+                // 显示成功模态框
+                setTimeout(() => {
+                    $('#orderSuccessModal').modal('show');
+                }, 500);
+
+                console.log('Order confirmed successfully:', data);
+            } else {
+                throw new Error(data.message || 'Failed to confirm order');
+            }
+        })
+        .catch(error => {
+            console.error('Error confirming order:', error);
+            alert('Failed to confirm order. Please try again.');
+        })
+        .finally(() => {
+            // 重置按钮状态
+            $btn.prop('disabled', false).html('✅ Confirm Order');
+        });
+});
+
+// 处理订单提交成功
+function handleOrderSubmissionSuccess(response) {
+    if (response.success) {
+        // 隐藏任何现存的模态框
+        $('.modal').modal('hide');
+
+        // 显示确认模态框而不是直接跳转
+        showOrderConfirmationModal(response.order);
+    } else {
+        alert('Failed to create order: ' + (response.message || 'Unknown error'));
+    }
 }
 
 // 获取表单数据
@@ -618,148 +596,7 @@ function showError(message) {
     $('html, body').animate({ scrollTop: 0 }, 500);
 }
 
-// 工具函数：格式化日期
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-// Show order confirmation modal
-function showOrderConfirmationModal(orderData) {
-    // Populate modal with order data
-    $('#modalOrderId').text('#' + orderData.id);
-    $('#modalCarInfo').text(orderData.selectedCar?.make + ' ' + orderData.selectedCar?.model || 'Selected Vehicle');
-    $('#modalRentalPeriod').text(orderData.rentalPeriod.startDate + ' (' + orderData.rentalPeriod.days + ' days)');
-    $('#modalTotalPrice').text('$' + orderData.totalPrice);
-
-    $('#modalCustomerName').text(orderData.customerInfo.name);
-    $('#modalCustomerEmail').text(orderData.customerInfo.email);
-    $('#modalCustomerPhone').text(orderData.customerInfo.phone);
-
-    // Store order ID for confirmation
-    $('#confirmOrderBtn').data('orderId', orderData.id);
-
-    // Show modal
-    $('#orderConfirmationModal').modal('show');
-}
-
-// Handle order confirmation
-$(document).on('click', '#confirmOrderBtn', function () {
-    const orderId = $(this).data('orderId');
-    const $btn = $(this);
-
-    // Show loading state
-    $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Confirming...');
-
-    // Call confirmation API
-    fetch(`/api/orders/${orderId}/confirm`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Hide confirmation modal
-                $('#orderConfirmationModal').modal('hide');
-
-                // Show success modal
-                setTimeout(() => {
-                    $('#orderSuccessModal').modal('show');
-                }, 500);
-
-                console.log('Order confirmed successfully:', data);
-            } else {
-                throw new Error(data.message || 'Failed to confirm order');
-            }
-        })
-        .catch(error => {
-            console.error('Error confirming order:', error);
-            alert('Failed to confirm order. Please try again.');
-        })
-        .finally(() => {
-            // Reset button state
-            $btn.prop('disabled', false).html('✅ Confirm Order');
-        });
-});
-
-// Handle order submission success
-function handleOrderSubmissionSuccess(response) {
-    if (response.success) {
-        // Hide any existing modals
-        $('.modal').modal('hide');
-
-        // Show confirmation modal instead of alert
-        showOrderConfirmationModal(response.order);
-    } else {
-        alert('Failed to create order: ' + (response.message || 'Unknown error'));
-    }
-}
-
-// Enhanced form validation with better error messages
-function validateForm() {
-    let isValid = true;
-
-    // 使用正确的字段ID
-    const fields = {
-        customerName: ($('#customerName').val() || '').trim(),    // ✅ 正确ID
-        customerEmail: ($('#customerEmail').val() || '').trim(),  // ✅ 正确ID
-        customerPhone: ($('#customerPhone').val() || '').trim(),  // ✅ 正确ID
-        driverLicense: ($('#driverLicense').val() || '').trim(),  // ✅ 正确ID
-        startDate: $('#startDate').val() || '',
-        rentalDays: $('#rentalDays').val() || ''
-    };
-
-    console.log('Validating form fields:', fields);
-
-    // 检查所有必填字段是否为空
-    Object.keys(fields).forEach(key => {
-        if (!fields[key]) {
-            console.log(`${key} is empty`);
-            isValid = false;
-        }
-    });
-
-    // 特定字段验证
-    if (fields.customerName && fields.customerName.length < 2) {
-        console.log('Name too short');
-        isValid = false;
-    }
-
-    if (fields.customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.customerEmail)) {
-        console.log('Email format invalid');
-        isValid = false;
-    }
-
-    if (fields.customerPhone && fields.customerPhone.length < 10) {
-        console.log('Phone too short');
-        isValid = false;
-    }
-
-    if (fields.startDate) {
-        const today = new Date().toISOString().split('T')[0];
-        if (fields.startDate < today) {
-            console.log('Start date is in the past');
-            isValid = false;
-        }
-    }
-
-    const days = parseInt(fields.rentalDays);
-    if (fields.rentalDays && (!days || days < 1 || days > 30)) {
-        console.log('Invalid rental days');
-        isValid = false;
-    }
-
-    console.log('🎯 Validation result:', isValid);
-    return isValid;
-}
-
-// Show validation errors
+// 显示验证错误
 function showValidationErrors(errors) {
     let errorHtml = '<div class="alert alert-danger"><ul class="mb-0">';
     errors.forEach(error => {
@@ -770,7 +607,17 @@ function showValidationErrors(errors) {
     $('#validationErrors').html(errorHtml).show();
 }
 
-// Hide validation errors
+// 隐藏验证错误
 function hideValidationErrors() {
     $('#validationErrors').hide();
+}
+
+// 工具函数：格式化日期
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
 }
