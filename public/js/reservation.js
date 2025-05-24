@@ -63,13 +63,19 @@ async function loadSelectedCar(vin) {
         });
 
         selectedCar = response;
+
+        // 显示车辆详情
         displayCarDetails(selectedCar);
 
-        // 检查车辆可用性
+        // 如果车辆本身是可用的，显示预订表单
         if (selectedCar.available) {
-            showReservationForm();
+            $('#carUnavailable').hide();
+            $('#reservationForm').show();
+            $('#submitBtn').prop('disabled', false).text('Submit Reservation');
         } else {
-            showCarUnavailable();
+            $('#reservationForm').hide();
+            $('#carUnavailable').show();
+            $('#submitBtn').prop('disabled', true).text('Car Unavailable');
         }
 
         $('#reservationContent').show();
@@ -81,6 +87,47 @@ async function loadSelectedCar(vin) {
     }
 }
 
+// 实时检查车辆可用性
+async function checkCarRealTimeAvailability(vin) {
+    try {
+        const response = await fetch(`/api/cars/${vin}/availability`, {
+            method: 'GET'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const isAvailable = data.available;
+
+            // 更新车辆状态
+            selectedCar.available = isAvailable;
+
+            // 根据可用性更新UI
+            if (isAvailable) {
+                $('#carUnavailable').hide();
+                $('#reservationForm').show();
+                $('#submitBtn').prop('disabled', false).text('Submit Reservation');
+            } else {
+                $('#reservationForm').hide();
+                $('#carUnavailable').show();
+                $('#submitBtn').prop('disabled', true).text('Car Unavailable');
+            }
+
+        } else {
+            console.error('Failed to check availability:', data.message);
+            selectedCar.available = false;
+            $('#reservationForm').hide();
+            $('#carUnavailable').show();
+        }
+
+    } catch (error) {
+        console.error('Error checking car availability:', error);
+        selectedCar.available = false;
+        $('#reservationForm').hide();
+        $('#carUnavailable').show();
+    }
+}
+
 // 显示车辆详情
 function displayCarDetails(car) {
     const carDetailsHtml = `
@@ -88,7 +135,8 @@ function displayCarDetails(car) {
             <div class="col-md-6">
                 <img src="${car.image || '/api/placeholder/400/300'}" 
                      class="img-fluid rounded mb-3" 
-                     alt="${car.brand} ${car.model}">
+                     alt="${car.brand} ${car.model}"
+                     style="width: 100%; height: 300px; object-fit: cover;">
             </div>
             <div class="col-md-6">
                 <h3 class="text-primary">${car.brand} ${car.model}</h3>
@@ -139,6 +187,7 @@ function displayCarDetails(car) {
 function showReservationForm() {
     $('#carUnavailable').hide();
     $('#reservationForm').show();
+    $('#submitBtn').prop('disabled', false).text('Submit Reservation');
     loadSavedFormData();
 }
 
@@ -146,6 +195,7 @@ function showReservationForm() {
 function showCarUnavailable() {
     $('#reservationForm').hide();
     $('#carUnavailable').show();
+    $('#submitBtn').prop('disabled', true).text('Car Unavailable');
 }
 
 // 初始化表单
@@ -180,14 +230,21 @@ function bindReservationEvents() {
     });
 
     // 表单提交 - 修复后直接提交到API
-    $('#reservationForm').on('submit', function (e) {
+    $('#reservationForm').off('submit').on('submit', function (e) {
         e.preventDefault();
+
+        // 双重检查车辆可用性
+        if (!selectedCar || !selectedCar.available) {
+            alert('Sorry, this car is no longer available. Please select another vehicle.');
+            window.location.href = 'index.html';
+            return;
+        }
 
         if (!validateForm()) {
             return;
         }
 
-        // 直接调用提交函数，不显示旧的确认框
+        // 继续提交流程
         submitReservationDirectly();
     });
 
@@ -199,6 +256,16 @@ function bindReservationEvents() {
     // 页面离开时保存表单数据
     $(window).on('beforeunload', function () {
         saveFormData();
+    });
+
+    // 页面可见性变化时重新检查可用性
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && selectedCar) {
+            // 页面重新变为可见时，检查车辆可用性
+            setTimeout(() => {
+                checkCarRealTimeAvailability(selectedCar.vin);
+            }, 1000);
+        }
     });
 }
 
@@ -381,8 +448,21 @@ function calculateTotalPrice() {
 
 // 更新提交按钮状态
 function updateSubmitButtonState() {
+    // 首先检查车辆是否可用
+    if (!selectedCar || !selectedCar.available) {
+        $('#submitBtn').prop('disabled', true).text('Car Unavailable');
+        return;
+    }
+
+    // 然后检查表单验证
     const isFormValid = validateForm();
     $('#submitBtn').prop('disabled', !isFormValid);
+
+    if (isFormValid) {
+        $('#submitBtn').text('Submit Reservation');
+    } else {
+        $('#submitBtn').text('Complete Required Fields');
+    }
 }
 
 // 直接提交预订 - 新的提交函数
@@ -469,7 +549,93 @@ function showOrderConfirmationModal(orderData) {
     $('#orderConfirmationModal').modal('show');
 }
 
-// 处理订单确认
+// 修改成功模态框以包含更多信息
+function showOrderSuccessModal() {
+    const successModalHtml = `
+        <div class="modal fade" id="orderSuccessModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">🎊 Order Confirmed Successfully!</h5>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4>Congratulations! Your order is confirmed</h4>
+                        <p>You will receive a confirmation email shortly.</p>
+                        <div class="alert alert-success">
+                            <strong>Order Status:</strong> <span class="badge bg-success">Confirmed</span>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> This car is now reserved for your dates and unavailable for other bookings.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+                            <i class="fas fa-search me-2"></i>Browse More Cars
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 如果模态框不存在，添加到页面
+    if ($('#orderSuccessModal').length === 0) {
+        $('body').append(successModalHtml);
+    }
+}
+
+// 更新车辆状态显示
+function updateCarStatusAfterConfirmation(carStatus) {
+    if (!carStatus.available) {
+        // 更新车辆状态显示
+        const statusBadge = $('.badge:contains("Available")');
+        if (statusBadge.length > 0) {
+            statusBadge.removeClass('bg-success').addClass('bg-danger').text('Unavailable');
+        }
+
+        // 禁用提交按钮
+        $('#submitBtn').prop('disabled', true).text('Car No Longer Available');
+
+        // 显示不可用提示
+        showCarUnavailableAfterConfirmation();
+
+        // 隐藏预订表单
+        $('#reservationForm').slideUp();
+
+        console.log('Car status updated to unavailable');
+    }
+}
+
+// 显示车辆确认后不可用的信息
+function showCarUnavailableAfterConfirmation() {
+    const unavailableHtml = `
+        <div class="alert alert-warning mt-3" id="carConfirmedAlert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle me-2"></i>
+                <div>
+                    <strong>Booking Confirmed!</strong><br>
+                    This car is no longer available for new reservations during your selected period.
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-primary" onclick="window.location.href='/'">
+                    <i class="fas fa-search me-2"></i>Browse Other Cars
+                </button>
+            </div>
+        </div>
+    `;
+
+    $('#carDetails').after(unavailableHtml);
+}
+
+// 修改订单确认处理
 $(document).on('click', '#confirmOrderBtn', function () {
     const orderId = $(this).data('orderId');
     const $btn = $(this);
@@ -489,6 +655,9 @@ $(document).on('click', '#confirmOrderBtn', function () {
             if (data.success) {
                 // 隐藏确认模态框
                 $('#orderConfirmationModal').modal('hide');
+
+                // 更新车辆状态显示
+                updateCarStatusAfterConfirmation(data.carStatus);
 
                 // 显示成功模态框
                 setTimeout(() => {

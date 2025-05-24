@@ -326,6 +326,7 @@
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">🎊 Order Confirmed Successfully!</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center">
                     <div class="mb-3">
@@ -336,10 +337,15 @@
                     <div class="alert alert-success">
                         <strong>Order Status:</strong> <span class="badge bg-success">Confirmed</span>
                     </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> This car is now reserved for your dates and unavailable for other
+                        bookings.
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" onclick="window.location.href='index.html'">
-                        Browse More Cars
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+                        <i class="fas fa-search me-2"></i>Browse More Cars
                     </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         Close

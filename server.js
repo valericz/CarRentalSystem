@@ -43,15 +43,19 @@ const getCars = () => readDataFile('cars.json');
 const getOrders = () => readDataFile('orders.json');
 const saveOrders = (orders) => writeDataFile('orders.json', orders);
 
-// Check car availability for given dates
-function isCarAvailable(vin, startDate, endDate) {
+// 修改可用性检查函数，排除当前订单
+function isCarAvailable(vin, startDate, endDate, excludeOrderId = null) {
     const orders = getOrders();
 
     const requestStart = new Date(startDate);
     const requestEnd = new Date(endDate);
 
-    // Check for conflicts with existing bookings
     const conflicts = orders.filter(order => {
+        // 排除当前订单
+        if (excludeOrderId && order.id === excludeOrderId) {
+            return false;
+        }
+
         if (order.vin !== vin || order.status === 'cancelled') {
             return false;
         }
@@ -60,11 +64,24 @@ function isCarAvailable(vin, startDate, endDate) {
         const existingEnd = new Date(existingStart);
         existingEnd.setDate(existingEnd.getDate() + order.rentalPeriod.days);
 
-        // Check if dates overlap
+        // 检查日期重叠
         return (requestStart < existingEnd && requestEnd > existingStart);
     });
 
     return conflicts.length === 0;
+}
+
+// 检查车辆未来是否还有可用时间（简化版本）
+function checkCarAvailabilityForFuture(vin) {
+    const orders = getOrders();
+    const confirmedOrders = orders.filter(order =>
+        order.vin === vin &&
+        order.status === 'confirmed'
+    );
+
+    // 如果有确认的订单，暂时标记为不可用
+    // 在实际应用中，这里应该有更复杂的逻辑来检查具体日期
+    return confirmedOrders.length === 0;
 }
 
 // API endpoint to check availability
@@ -257,21 +274,81 @@ app.post('/api/orders', (req, res) => {
     }
 });
 
-// 确认订单
+// Replace existing confirmation endpoint with enhanced version
 app.put('/api/orders/:id/confirm', (req, res) => {
-    const orders = getOrders();
-    const order = orders.find(o => o.id === req.params.id);
+    try {
+        const orderId = req.params.id;
+        console.log('Confirming order:', orderId);
 
-    if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-    }
+        const orders = getOrders();
+        const orderIndex = orders.findIndex(order => order.id === orderId);
 
-    order.status = 'confirmed';
+        if (orderIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
 
-    if (saveOrders(orders)) {
-        res.json({ success: true, order });
-    } else {
-        res.status(500).json({ error: 'Failed to confirm order' });
+        const order = orders[orderIndex];
+
+        // 再次检查车辆可用性（防止并发问题）
+        const startDate = new Date(order.rentalPeriod.startDate);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + order.rentalPeriod.days);
+
+        if (!isCarAvailable(order.vin, startDate, endDate, orderId)) {
+            return res.status(409).json({
+                success: false,
+                message: 'Car is no longer available for these dates'
+            });
+        }
+
+        // 更新订单状态
+        orders[orderIndex] = {
+            ...order,
+            status: 'confirmed',
+            confirmedAt: new Date().toISOString()
+        };
+
+        // 保存订单
+        saveOrders(orders);
+
+        // 检查车辆在确认期间是否还有其他可用时间
+        const carStillAvailable = checkCarAvailabilityForFuture(order.vin);
+
+        // 如果车辆不再可用，更新车辆状态
+        if (!carStillAvailable) {
+            const cars = getCars();
+            const carIndex = cars.findIndex(car => car.vin === order.vin);
+            if (carIndex !== -1) {
+                cars[carIndex].available = false;
+                writeDataFile('cars.json', cars);
+            }
+        }
+
+        console.log('Order confirmed successfully:', {
+            orderId: orderId,
+            carVin: order.vin,
+            carStillAvailable: carStillAvailable
+        });
+
+        res.json({
+            success: true,
+            message: 'Order confirmed successfully',
+            order: orders[orderIndex],
+            carStatus: {
+                vin: order.vin,
+                available: carStillAvailable
+            }
+        });
+
+    } catch (error) {
+        console.error('Error confirming order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error confirming order'
+        });
     }
 });
 

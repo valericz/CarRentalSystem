@@ -1,605 +1,289 @@
 // 全局变量
 let allCars = [];
-let filteredCars = [];
-let selectedCarVin = localStorage.getItem('selectedCarVin') || null;
+let currentBrandFilter = '';
+let currentSearchQuery = '';
+let searchDebounceTimer = null;
 
 // 页面加载完成后执行
 $(document).ready(function () {
-    initializePage();
+    console.log('🚀 Initializing car rental app...');
+
+    initializeFilters();
+    loadCars();
 });
 
-// 初始化页面
-async function initializePage() {
-    try {
-        // 加载车辆数据
-        await loadCars();
+// 品牌筛选处理函数
+function handleBrandFilter() {
+    currentBrandFilter = $('#brandFilter').val();
+    console.log('🔍 Brand filter selected:', currentBrandFilter);
 
-        // 加载筛选选项
-        await loadFilters();
+    // 应用筛选
+    applyFilters();
+}
 
-        // 显示所有车辆
+// 搜索处理函数 - 使用防抖
+function handleSearch() {
+    // 清除之前的定时器
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+    }
+
+    // 设置新的定时器
+    searchDebounceTimer = setTimeout(() => {
+        currentSearchQuery = $('#searchInput').val().trim().toLowerCase();
+        console.log('🔍 Search query:', currentSearchQuery);
+        applyFilters();
+    }, 300); // 300ms 防抖延迟
+}
+
+// 应用所有筛选器
+function applyFilters() {
+    console.log('📊 Applying filters - Brand:', currentBrandFilter, 'Search:', currentSearchQuery);
+
+    // 如果没有任何筛选条件，直接显示所有车辆
+    if (!currentBrandFilter && !currentSearchQuery) {
         displayCars(allCars);
-
-        // 绑定事件
-        bindEvents();
-
-    } catch (error) {
-        console.error('Error initializing page:', error);
-        showError('Failed to load data. Please refresh the page.');
-    }
-}
-
-// 加载车辆数据
-async function loadCars(searchQuery = '', typeFilter = '', brandFilter = '') {
-    try {
-        const params = new URLSearchParams();
-        if (searchQuery) params.append('search', searchQuery);
-        if (typeFilter) params.append('type', typeFilter);
-        if (brandFilter) params.append('brand', brandFilter);
-
-        const response = await $.ajax({
-            url: `/api/cars?${params.toString()}`,
-            method: 'GET'
-        });
-
-        filteredCars = response;
-        if (!searchQuery && !typeFilter && !brandFilter) {
-            allCars = response;
-        }
-
-        return response;
-    } catch (error) {
-        throw error;
-    }
-}
-
-// 加载筛选选项
-async function loadFilters() {
-    try {
-        const response = await $.ajax({
-            url: '/api/filters',
-            method: 'GET'
-        });
-
-        // 填充类型筛选
-        const typeSelect = $('#typeFilter');
-        typeSelect.empty().append('<option value="">All Types</option>');
-        response.types.forEach(type => {
-            typeSelect.append(`<option value="${type}">${type}</option>`);
-        });
-
-        // 填充品牌筛选
-        const brandSelect = $('#brandFilter');
-        brandSelect.empty().append('<option value="">All Brands</option>');
-        response.brands.forEach(brand => {
-            brandSelect.append(`<option value="${brand}">${brand}</option>`);
-        });
-
-    } catch (error) {
-        console.error('Error loading filters:', error);
-    }
-}
-
-// 显示车辆网格
-function displayCars(cars) {
-    const grid = $('#carsContainer');
-    grid.empty();
-
-    if (!cars.length) {
-        grid.append(`
-            <div class="col-12">
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-search me-2"></i>
-                    No cars found matching your criteria.
-                    <div class="mt-2">
-                        <button class="btn btn-outline-primary" onclick="resetAllFilters()">
-                            <i class="fas fa-refresh me-1"></i>Show All Cars
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `);
+        updateResultsCount(allCars.length, allCars.length);
         return;
     }
 
-    cars.forEach(car => {
-        grid.append(createCarCard(car));
-    });
-}
-
-// 创建车辆卡片
-function createCarCard(car) {
-    const availabilityBadge = car.available
-        ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Available</span>'
-        : '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Unavailable</span>';
-
-    const rentButton = car.available
-        ? `<a href="/reservation?carId=${car.vin}" class="btn btn-primary w-100 mt-2 rent-btn">
-             <i class="fas fa-calendar-plus me-1"></i>Reserve Now
-           </a>`
-        : `<button class="btn btn-secondary w-100 mt-2" disabled>
-             <i class="fas fa-times me-1"></i>Unavailable
-           </button>`;
-
-    const imageUrl = car.image || '/api/placeholder/300/200';
-
-    return `
-        <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card h-100 shadow-sm car-card" data-vin="${car.vin}">
-                <div class="position-relative">
-                    <img src="${imageUrl}" class="card-img-top car-image" alt="${car.brand} ${car.model}" 
-                         style="object-fit:cover;height:200px;" onerror="this.src='/api/placeholder/300/200'">
-                    <div class="position-absolute top-0 end-0 m-2">
-                        ${availabilityBadge}
-                    </div>
-                </div>
-                <div class="card-body d-flex flex-column">
-                    <div class="mb-2">
-                        <h5 class="card-title text-primary mb-1">${car.brand} ${car.model}</h5>
-                        <span class="badge bg-secondary">${car.type}</span>
-                    </div>
-                    <div class="car-details mb-3 flex-grow-1">
-                        <div class="row text-sm">
-                            <div class="col-6 mb-1">
-                                <i class="fas fa-calendar me-1 text-primary"></i>
-                                <small>${car.year}</small>
-                            </div>
-                            <div class="col-6 mb-1">
-                                <i class="fas fa-tachometer-alt me-1 text-primary"></i>
-                                <small>${car.mileage.toLocaleString()}mi</small>
-                            </div>
-                            <div class="col-6 mb-1">
-                                <i class="fas fa-gas-pump me-1 text-primary"></i>
-                                <small>${car.fuelType}</small>
-                            </div>
-                            <div class="col-6 mb-1">
-                                <i class="fas fa-users me-1 text-primary"></i>
-                                <small>${car.passengerCapacity || 4} seats</small>
-                            </div>
-                        </div>
-                        ${car.description ? `<p class="text-muted mt-2 mb-0 small">${car.description}</p>` : ''}
-                    </div>
-                    <div class="mt-auto">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div class="price">
-                                <h4 class="text-success mb-0">$${car.pricePerDay}<small class="text-muted">/day</small></h4>
-                            </div>
-                        </div>
-                        ${rentButton}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// 绑定事件
-function bindEvents() {
-    // Logo点击返回首页
-    $('#logo').on('click', function (e) {
-        e.preventDefault();
-        window.location.href = '/';
-    });
-
-    // 搜索按钮点击
-    $('#searchButton').on('click', performSearch);
-
-    // 搜索输入框事件
-    let searchTimeout;
-    $('#searchInput').on('input', function () {
-        clearTimeout(searchTimeout);
-        const query = $(this).val().trim();
-
-        if (query.length >= 1) {
-            searchTimeout = setTimeout(() => loadSuggestions(query), 300);
-        } else if (query.length === 0) {
-            hideSuggestions();
-            displayCars(allCars); // 显示所有车辆
-        } else {
-            hideSuggestions();
+    let filteredCars = allCars.filter(car => {
+        // 检查品牌筛选（支持 brand 或 make 字段）
+        if (currentBrandFilter) {
+            const carBrand = car.brand || car.make || '';
+            if (carBrand !== currentBrandFilter) {
+                console.log('❌ Brand mismatch:', carBrand, '!==', currentBrandFilter);
+                return false;
+            }
         }
-    });
 
-    // 搜索框回车事件
-    $('#searchInput').on('keypress', function (e) {
-        if (e.which === 13) { // Enter键
-            e.preventDefault();
-            performSearch();
+        // 检查搜索筛选
+        if (currentSearchQuery) {
+            const searchFields = [
+                car.brand || car.make || '',
+                car.model || '',
+                car.type || ''
+            ].join(' ').toLowerCase();
+
+            if (!searchFields.includes(currentSearchQuery)) {
+                console.log('❌ Search mismatch for:', car.brand || car.make, car.model);
+                return false;
+            }
         }
+
+        return true;
     });
 
-    // 搜索框焦点事件
-    $('#searchInput').on('focus', function () {
-        const query = $(this).val().trim();
-        if (query.length >= 2) {
-            loadSuggestions(query);
-        }
-    });
-
-    // 筛选器变化事件
-    $('#typeFilter, #brandFilter').on('change', function () {
-        performSearch();
-    });
-
-    // 清除筛选器按钮
-    $('#clearFilters').on('click', function () {
-        resetAllFilters();
-    });
-
-    // 点击其他地方隐藏建议
-    $(document).on('click', function (e) {
-        if (!$(e.target).closest('#searchInput, #searchSuggestions').length) {
-            hideSuggestions();
-        }
-    });
-
-    // 车辆卡片悬停效果
-    $(document).on('mouseenter', '.car-card', function () {
-        $(this).addClass('shadow-lg').removeClass('shadow-sm');
-    });
-
-    $(document).on('mouseleave', '.car-card', function () {
-        $(this).addClass('shadow-sm').removeClass('shadow-lg');
+    // 使用 requestAnimationFrame 优化渲染
+    requestAnimationFrame(() => {
+        displayCars(filteredCars);
+        updateResultsCount(filteredCars.length, allCars.length);
     });
 }
 
-// 执行搜索
-async function performSearch() {
-    const searchQuery = $('#searchInput').val().trim();
-    const typeFilter = $('#typeFilter').val();
-    const brandFilter = $('#brandFilter').val();
-
-    try {
-        const cars = await loadCars(searchQuery, typeFilter, brandFilter);
-        displayCars(cars);
-        hideSuggestions();
-    } catch (error) {
-        console.error('Search error:', error);
-        showError('Search failed. Please try again.');
-        displayCars([]);
-    }
-}
-
-// 重置所有筛选器
-function resetAllFilters() {
-    $('#searchInput').val('');
-    $('#typeFilter').val('');
-    $('#brandFilter').val('');
-    hideSuggestions();
-    displayCars(allCars);
-}
-
-// Enhanced search with loading states
-function loadSuggestions(query) {
-    // Show loading state
-    showSearchLoading();
-
-    const filteredCars = allCars.filter(car =>
-        car.brand.toLowerCase().includes(query.toLowerCase()) ||
-        car.model.toLowerCase().includes(query.toLowerCase()) ||
-        car.type.toLowerCase().includes(query.toLowerCase())
-    );
-
-    // Simulate API delay for better UX
-    setTimeout(() => {
-        displaySuggestions(filteredCars.slice(0, 5), query);
-    }, 100);
-}
-
-// Show search loading state
-function showSearchLoading() {
-    const loadingHtml = `
-        <div class="suggestion-item loading">
-            <span class="spinner-border spinner-border-sm me-2"></span>
-            Searching...
-        </div>
-    `;
-    $('#suggestions').html(loadingHtml).show();
-}
-
-// Enhanced suggestions display
-function displaySuggestions(cars, query) {
-    if (cars.length === 0) {
-        const noResultsHtml = `
-            <div class="suggestion-item no-results">
-                <i class="fas fa-search me-2"></i>
-                No cars found for "${query}"
-            </div>
-        `;
-        $('#suggestions').html(noResultsHtml).show();
-        return;
-    }
-
-    let suggestionsHtml = '';
-    cars.forEach(car => {
-        const highlightedText = highlightSearchTerm(`${car.brand} ${car.model}`, query);
-        suggestionsHtml += `
-            <div class="suggestion-item" data-car-id="${car.vin}">
-                <div class="d-flex align-items-center">
-                    <img src="${car.image || '/api/placeholder/50/35'}" alt="${car.brand} ${car.model}" class="suggestion-image me-3">
-                    <div>
-                        <div class="suggestion-title">${highlightedText}</div>
-                        <div class="suggestion-details">
-                            ${car.type} • $${car.pricePerDay}/day • ${car.available ? 'Available' : 'Unavailable'}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    $('#suggestions').html(suggestionsHtml).show();
-}
-
-// Highlight search terms
-function highlightSearchTerm(text, term) {
-    if (!term) return text;
-    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
-}
-
-// Enhanced car display with loading states
+// 显示车辆
 function displayCars(cars) {
     if (cars.length === 0) {
         showNoResults();
         return;
     }
 
-    let carsHtml = '';
+    const grid = $('#carsContainer');
+    grid.empty();
+
     cars.forEach(car => {
+        // 使用 brand 或 make 字段
+        const brandName = car.brand || car.make || 'Unknown';
         const statusBadge = car.available
             ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Available</span>'
-            : '<span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Unavailable</span>';
+            : '<span class="badge bg-danger"><i class="fas fa-ban me-1"></i>Unavailable</span>';
 
-        carsHtml += `
+        // 创建默认占位图URL，使用车辆品牌和型号
+        const placeholderText = `${brandName} ${car.model}`;
+        const placeholderUrl = `/api/placeholder/800/500?text=${encodeURIComponent(placeholderText)}`;
+
+        const carHtml = `
             <div class="col-lg-4 col-md-6 mb-4" data-car-id="${car.vin}">
-                <div class="card car-card h-100 ${car.available ? '' : 'unavailable'}">
-                    <div class="position-relative">
-                        <img src="${car.image || '/api/placeholder/300/200'}" class="card-img-top car-image" 
-                             alt="${car.brand} ${car.model}"
-                             style="object-fit:cover;height:200px;"
-                             onerror="this.src='/api/placeholder/300/200'">
+                <div class="card car-card h-100 ${car.available ? '' : 'unavailable'}" 
+                     style="${car.available ? '' : 'opacity: 0.7; cursor: not-allowed;'}">
+                    <div class="position-relative" style="padding-top: 66.67%; background-color: #f8f9fa;">
+                        <img src="${car.image || placeholderUrl}" 
+                             class="card-img-top car-image position-absolute top-0 start-0 w-100 h-100" 
+                             alt="${brandName} ${car.model}"
+                             style="object-fit: cover; ${car.available ? '' : 'filter: grayscale(100%);'}"
+                             onerror="this.src='${placeholderUrl}'; this.onerror=null;">
                         <div class="position-absolute top-0 end-0 m-2">
                             ${statusBadge}
                         </div>
+                        ${!car.available ? `
+                        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                             style="background: rgba(0,0,0,0.5);">
+                            <div class="text-white text-center p-3">
+                                <i class="fas fa-ban fa-2x mb-2"></i>
+                                <h5 class="mb-0">Currently Unavailable</h5>
+                                <small>This vehicle cannot be rented at this time</small>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                     <div class="card-body d-flex flex-column">
-                        <h5 class="card-title text-primary">${car.brand} ${car.model}</h5>
+                        <h5 class="card-title text-truncate" title="${brandName} ${car.model}">${brandName} ${car.model}</h5>
                         <div class="car-details mb-3">
-                            <div class="row text-sm">
-                                <div class="col-6 mb-1">
-                                    <i class="fas fa-car text-primary me-2"></i>${car.type}
-                                </div>
-                                <div class="col-6 mb-1">
-                                    <i class="fas fa-calendar-alt text-primary me-2"></i>${car.year}
-                                </div>
-                                <div class="col-6 mb-1">
-                                    <i class="fas fa-tachometer-alt text-primary me-2"></i>${car.mileage.toLocaleString()}mi
-                                </div>
-                                <div class="col-6 mb-1">
-                                    <i class="fas fa-gas-pump text-primary me-2"></i>${car.fuelType}
-                                </div>
-                            </div>
+                            <p class="car-info mb-2"><i class="fas fa-car text-primary me-2"></i>Type: ${car.type}</p>
+                            <p class="car-info mb-2"><i class="fas fa-calendar-alt text-primary me-2"></i>Year: ${car.year}</p>
+                            <p class="car-info mb-2"><i class="fas fa-tachometer-alt text-primary me-2"></i>Mileage: ${car.mileage.toLocaleString()}</p>
+                            <p class="car-info mb-2"><i class="fas fa-gas-pump text-primary me-2"></i>Fuel: ${car.fuelType}</p>
                         </div>
                         <div class="mt-auto">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h4 class="text-success mb-0">$${car.pricePerDay}<small class="text-muted">/day</small></h4>
+                                <span class="price-text fw-bold">$${car.pricePerDay}/day</span>
                             </div>
-                            <a href="/reservation?carId=${car.vin}" 
-                               class="btn btn-primary w-100 rent-btn"
-                               ${car.available ? '' : 'disabled'}>
-                                ${car.available ? '<i class="fas fa-calendar-plus me-1"></i>Rent Now' : '<i class="fas fa-times me-1"></i>Unavailable'}
-                            </a>
+                            ${car.available ? `
+                                <a href="/reservation?carId=${car.vin}" 
+                                   class="btn btn-primary w-100 rent-btn">
+                                    <i class="fas fa-calendar-plus me-2"></i>Rent Now
+                                </a>
+                            ` : `
+                                <button class="btn btn-secondary w-100" disabled>
+                                    <i class="fas fa-ban me-2"></i>Unavailable
+                                </button>
+                            `}
                         </div>
                     </div>
                 </div>
             </div>
         `;
+
+        grid.append(carHtml);
     });
 
-    $('#carsContainer').html(carsHtml);
-    updateResultsCount(cars.length);
+    // 为不可用的车辆添加事件阻止
+    $('.car-card.unavailable').on('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    });
 }
 
-// Show no results message
+// 显示无结果
 function showNoResults() {
     const noResultsHtml = `
         <div class="col-12">
             <div class="text-center py-5">
                 <i class="fas fa-car text-muted" style="font-size: 4rem;"></i>
                 <h4 class="mt-3 text-muted">No Cars Found</h4>
-                <p class="text-muted">Try adjusting your search criteria</p>
-                <button class="btn btn-outline-primary" onclick="clearSearch()">
-                    <i class="fas fa-undo me-2"></i>Show All Cars
+                <p class="text-muted">No cars match your current filters</p>
+                <button class="btn btn-outline-primary" onclick="clearFilters()">
+                    <i class="fas fa-undo me-2"></i>Clear Filters
                 </button>
             </div>
         </div>
     `;
     $('#carsContainer').html(noResultsHtml);
-    updateResultsCount(0);
 }
 
-// Update results count
-function updateResultsCount(count) {
-    const text = count === 1 ? '1 car found' : `${count} cars found`;
-    $('#resultsCount').text(text);
+// 更新结果计数
+function updateResultsCount(filtered, total) {
+    const countText = filtered === total
+        ? `${total} cars available`
+        : `Showing ${filtered} of ${total} cars`;
+
+    $('#resultsCount').text(countText);
 }
 
-// Clear search function
-function clearSearch() {
-    $('#searchInput').val('');
-    $('#typeFilter').val('');
+// 填充品牌筛选器
+function populateBrandFilter(cars) {
+    // 获取所有唯一品牌（支持 brand 或 make 字段）
+    const brands = [...new Set(cars.map(car => car.brand || car.make || 'Unknown'))].sort();
+
+    console.log('🏷️ Available brands:', brands);
+
+    let brandOptions = '<option value="">All Brands</option>';
+    brands.forEach(brand => {
+        brandOptions += `<option value="${brand}">${brand}</option>`;
+    });
+
+    $('#brandFilter').html(brandOptions);
+}
+
+// 清除筛选器
+function clearFilters() {
+    // 清除定时器
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+    }
+
+    currentBrandFilter = '';
+    currentSearchQuery = '';
+
     $('#brandFilter').val('');
-    hideSuggestions();
-    displayCars(allCars);
+    $('#searchInput').val('');
+
+    // 使用 requestAnimationFrame 优化渲染
+    requestAnimationFrame(() => {
+        displayCars(allCars);
+        updateResultsCount(allCars.length, allCars.length);
+    });
+
+    console.log('🧹 Filters cleared');
 }
 
-// Add CSS for enhanced search
-const searchStyles = `
-<style>
-.suggestion-item {
-    padding: 12px 16px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
+// 加载车辆数据
+async function loadCars() {
+    try {
+        console.log('🚗 Loading cars...');
 
-.suggestion-item:hover {
-    background-color: #f8f9fa;
-}
+        const response = await fetch('/api/cars');
+        const cars = await response.json();
 
-.suggestion-item.loading {
-    cursor: default;
-    color: #6c757d;
-}
+        allCars = cars;
 
-.suggestion-item.no-results {
-    cursor: default;
-    color: #6c757d;
-    font-style: italic;
-}
+        console.log('✅ Cars loaded:', cars.length);
+        console.log('📋 Sample car data:', cars[0]);
 
-.suggestion-image {
-    width: 50px;
-    height: 35px;
-    object-fit: cover;
-    border-radius: 4px;
-}
+        // 使用 requestAnimationFrame 优化初始渲染
+        requestAnimationFrame(() => {
+            populateBrandFilter(cars);
+            displayCars(cars);
+            updateResultsCount(cars.length, cars.length);
+        });
 
-.suggestion-title {
-    font-weight: 600;
-    color: #333;
-}
-
-.suggestion-details {
-    font-size: 0.85em;
-    color: #6c757d;
-}
-
-.car-card.unavailable {
-    opacity: 0.8;
-}
-
-.car-card.unavailable .card-img-top {
-    filter: grayscale(50%);
-}
-
-mark {
-    background-color: #fff3cd;
-    padding: 0 2px;
-    border-radius: 2px;
-}
-
-#resultsCount {
-    color: #6c757d;
-    font-size: 0.9em;
-    margin-bottom: 1rem;
-}
-
-#suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 0 0 4px 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    z-index: 1000;
-    max-height: 300px;
-    overflow-y: auto;
-}
-</style>
-`;
-
-// Inject styles
-if (!document.getElementById('searchStyles')) {
-    $('head').append(searchStyles);
-    $('<div id="searchStyles">').appendTo('head');
-}
-
-// Hide suggestions
-function hideSuggestions() {
-    $('#suggestions').hide();
-}
-
-// 显示错误信息
-function showError(message) {
-    const alertHtml = `
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-
-    // 在页面顶部显示错误信息
-    $('main .container').prepend(alertHtml);
-
-    // 滚动到顶部
-    $('html, body').animate({ scrollTop: 0 }, 300);
-
-    // 5秒后自动隐藏
-    setTimeout(() => {
-        $('.alert').alert('close');
-    }, 5000);
-}
-
-// 键盘导航支持
-let selectedSuggestionIndex = -1;
-
-$(document).on('keydown', '#searchInput', function (e) {
-    const suggestions = $('.suggestion-item');
-
-    switch (e.keyCode) {
-        case 40: // 下箭头
-            e.preventDefault();
-            selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
-            updateSelectedSuggestion(suggestions);
-            break;
-        case 38: // 上箭头
-            e.preventDefault();
-            selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
-            updateSelectedSuggestion(suggestions);
-            break;
-        case 13: // Enter键
-            if (selectedSuggestionIndex >= 0 && suggestions.length > 0) {
-                e.preventDefault();
-                const selectedSuggestion = $(suggestions[selectedSuggestionIndex]).data('suggestion');
-                $('#searchInput').val(selectedSuggestion);
-                hideSuggestions();
-                performSearch();
-                selectedSuggestionIndex = -1;
-            }
-            break;
-        case 27: // Escape键
-            hideSuggestions();
-            selectedSuggestionIndex = -1;
-            break;
-    }
-});
-
-// 更新选中的建议项
-function updateSelectedSuggestion(suggestions) {
-    suggestions.removeClass('selected');
-    if (selectedSuggestionIndex >= 0) {
-        $(suggestions[selectedSuggestionIndex]).addClass('selected');
+    } catch (error) {
+        console.error('❌ Error loading cars:', error);
+        $('#carsContainer').html(`
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Failed to load cars. Please refresh the page.
+                </div>
+            </div>
+        `);
     }
 }
 
-// 响应式处理
-function handleResponsiveLayout() {
-    if ($(window).width() < 768) {
-        $('.car-details p').addClass('small');
-    } else {
-        $('.car-details p').removeClass('small');
-    }
+// 初始化事件监听器
+function initializeFilters() {
+    console.log('🔧 Initializing filters...');
+
+    // 移除可能存在的旧事件监听器
+    $('#brandFilter').off('change').on('change', handleBrandFilter);
+    $('#searchInput').off('input').on('input', handleSearch);
+
+    console.log('✅ Filters initialized');
 }
 
-// 窗口大小变化时调整布局
-$(window).on('resize', handleResponsiveLayout);
+// 调试函数 - 在控制台使用
+window.debugFilters = function () {
+    console.log('🔍 Current filters:', {
+        brand: currentBrandFilter,
+        search: currentSearchQuery,
+        totalCars: allCars.length
+    });
 
-// 页面加载完成后调整布局
-$(document).ready(function () {
-    handleResponsiveLayout();
-});
+    console.log('🏷️ Available brands:', [...new Set(allCars.map(car => car.brand || car.make))]);
+
+    return {
+        allCars: allCars,
+        currentFilters: { brand: currentBrandFilter, search: currentSearchQuery }
+    };
+};

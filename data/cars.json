@@ -21,7 +21,7 @@
     "mileage": 22000,
     "fuelType": "Gasoline",
     "pricePerDay": 42,
-    "available": true,
+    "available": false,
     "image": "/api/placeholder/400/300",
     "description": "Spacious and comfortable sedan with excellent safety ratings."
   },
@@ -34,7 +34,7 @@
     "mileage": 8000,
     "fuelType": "Gasoline",
     "pricePerDay": 65,
-    "available": true,
+    "available": false,
     "image": "/api/placeholder/400/300",
     "description": "7-seater SUV ideal for family trips and outdoor adventures."
   },
@@ -60,7 +60,7 @@
     "mileage": 18000,
     "fuelType": "Gasoline",
     "pricePerDay": 55,
-    "available": true,
+    "available": false,
     "image": "/api/placeholder/400/300",
     "description": "Stylish crossover SUV with excellent fuel economy and smooth handling."
   },
@@ -73,7 +73,7 @@
     "mileage": 3000,
     "fuelType": "Electric",
     "pricePerDay": 75,
-    "available": true,
+    "available": false,
     "image": "/api/placeholder/400/300",
     "description": "All-electric luxury sedan with autopilot capabilities and zero emissions."
   },
@@ -112,7 +112,7 @@
     "mileage": 30000,
     "fuelType": "Gasoline",
     "pricePerDay": 60,
-    "available": true,
+    "available": false,
     "image": "/api/placeholder/400/300",
     "description": "Rugged off-road SUV built for adventure and outdoor exploration."
   },
