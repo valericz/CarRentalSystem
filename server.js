@@ -6,6 +6,55 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// 🎯 内存存储 - 解决 Vercel serverless 无法写文件的问题
+let carsData = [];
+let ordersData = [];
+
+// 初始化数据
+const initializeData = () => {
+    try {
+        // 读取初始数据
+        carsData = readDataFile('cars.json');
+        ordersData = readDataFile('orders.json');
+        console.log('✅ 数据初始化完成:', { cars: carsData.length, orders: ordersData.length });
+    } catch (error) {
+        console.error('❌ 数据初始化失败:', error);
+        // 如果读取失败，使用默认数据
+        carsData = getDefaultCarsData();
+        ordersData = [];
+    }
+};
+
+// 默认车辆数据（防止文件读取失败）
+const getDefaultCarsData = () => [
+    {
+        "vin": "1HGCM82633A123456",
+        "brand": "Toyota",
+        "model": "Camry",
+        "type": "Sedan",
+        "year": 2023,
+        "mileage": 15000,
+        "fuelType": "Gasoline",
+        "pricePerDay": 45,
+        "available": true,
+        "image": "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb",
+        "description": "Reliable and fuel-efficient sedan perfect for business trips and daily commuting."
+    },
+    {
+        "vin": "2HGCM82633A654321",
+        "brand": "Honda",
+        "model": "Accord",
+        "type": "Sedan",
+        "year": 2022,
+        "mileage": 22000,
+        "fuelType": "Gasoline",
+        "pricePerDay": 42,
+        "available": true,
+        "image": "https://images.unsplash.com/photo-1617469767053-d3b523a0b982",
+        "description": "Spacious and comfortable sedan with excellent safety ratings."
+    }
+];
+
 // Placeholder image route (must be before static middleware)
 app.get('/api/placeholder/:width/:height', (req, res) => {
     const { width, height } = req.params;
@@ -17,7 +66,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// 读取数据文件的辅助函数
+// 读取数据文件的辅助函数（仅用于初始化）
 const readDataFile = (filename) => {
     try {
         const data = fs.readFileSync(path.join(__dirname, 'data', filename), 'utf8');
@@ -28,20 +77,20 @@ const readDataFile = (filename) => {
     }
 };
 
-const writeDataFile = (filename, data) => {
-    try {
-        fs.writeFileSync(path.join(__dirname, 'data', filename), JSON.stringify(data, null, 2));
-        return true;
-    } catch (error) {
-        console.error(`Error writing ${filename}:`, error);
-        return false;
-    }
+// 🎯 修改后的数据访问函数 - 使用内存存储
+const getCars = () => carsData;
+const getOrders = () => ordersData;
+const saveOrders = (orders) => {
+    ordersData = [...orders]; // 创建副本
+    console.log('✅ 订单保存到内存:', orders.length);
+    return true; // 内存存储总是成功
 };
 
-// Helper functions for data access
-const getCars = () => readDataFile('cars.json');
-const getOrders = () => readDataFile('orders.json');
-const saveOrders = (orders) => writeDataFile('orders.json', orders);
+const saveCars = (cars) => {
+    carsData = [...cars]; // 创建副本
+    console.log('✅ 车辆数据保存到内存:', cars.length);
+    return true;
+};
 
 // 修改可用性检查函数，排除当前订单
 function isCarAvailable(vin, startDate, endDate, excludeOrderId = null) {
@@ -223,7 +272,7 @@ app.get('/api/cars/:vin', (req, res) => {
     res.json(car);
 });
 
-// 创建新订单端点
+// 🎯 修复后的创建新订单端点
 app.post('/api/orders', (req, res) => {
     try {
         console.log('Creating new reservation draft:', req.body);
@@ -281,15 +330,12 @@ app.post('/api/orders', (req, res) => {
             createdAt: new Date().toISOString()
         };
 
-        // 保存订单
+        // 保存订单到内存
         const orders = getOrders();
         orders.push(order);
+        saveOrders(orders);
 
-        if (!saveOrders(orders)) {
-            throw new Error('Failed to save order');
-        }
-
-        console.log('Draft order created successfully:', order.id);
+        console.log('✅ Draft order created successfully:', order.id);
 
         res.json({
             success: true,
@@ -374,22 +420,21 @@ app.put('/api/orders/:id/confirm', (req, res) => {
             confirmedAt: new Date().toISOString()
         };
 
-        // 保存订单
-        if (!saveOrders(orders)) {
-            throw new Error('Failed to save confirmed order');
-        }
+        // 保存订单到内存
+        saveOrders(orders);
 
         // 更新车辆状态
         const cars = getCars();
         const carIndex = cars.findIndex(car => car.vin === order.vin);
         if (carIndex !== -1) {
-            cars[carIndex].available = false;
-            if (!writeDataFile('cars.json', cars)) {
-                console.error('Warning: Failed to update car availability');
-            }
+            cars[carIndex] = {
+                ...cars[carIndex],
+                available: false
+            };
+            saveCars(cars);
         }
 
-        console.log('Order confirmed successfully:', {
+        console.log('✅ Order confirmed successfully:', {
             orderId: orderId,
             carVin: order.vin,
             carNowUnavailable: true
@@ -409,7 +454,8 @@ app.put('/api/orders/:id/confirm', (req, res) => {
         console.error('Error confirming order:', error);
         res.status(500).json({
             success: false,
-            message: 'Error confirming order'
+            message: 'Error confirming order',
+            error: error.message
         });
     }
 });
@@ -543,20 +589,27 @@ app.get('/api/orders/drafts', (req, res) => {
         });
     }
 });
+
 // 添加健康检查端点
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        dataStatus: {
+            cars: getCars().length,
+            orders: getOrders().length
+        }
     });
 });
 
-// 修改服务器启动代码
+// 🎯 初始化数据并启动服务器
+initializeData();
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Car Rental Server running on port ${PORT}`);
     console.log(`📊 Health check available at /health`);
-
+    console.log(`📋 Loaded data: ${getCars().length} cars, ${getOrders().length} orders`);
 
     // 启动时清理一次
     cleanupExpiredDraftOrders();
