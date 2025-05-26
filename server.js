@@ -4,7 +4,7 @@ const fs = require('fs');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Placeholder image route (must be before static middleware)
 app.get('/api/placeholder/:width/:height', (req, res) => {
@@ -541,10 +541,20 @@ app.get('/api/orders/drafts', (req, res) => {
         });
     }
 });
+// 添加健康检查端点
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
 
 // 修改服务器启动代码
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Car Rental Server running on port ${PORT}`);
+    console.log(`📊 Health check available at /health`);
+
 
     // 启动时清理一次
     cleanupExpiredDraftOrders();
