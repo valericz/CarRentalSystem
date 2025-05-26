@@ -34,7 +34,7 @@
     "mileage": 8000,
     "fuelType": "Gasoline",
     "pricePerDay": 65,
-    "available": false,
+    "available": true,
     "image": "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf",
     "description": "7-seater SUV ideal for family trips and outdoor adventures."
   },

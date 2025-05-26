@@ -17,14 +17,11 @@ function getCarIdFromUrl() {
 // 初始化预订页面
 async function initializeReservationPage() {
     try {
-        // 优先从 URL 获取 carId
         let selectedVin = getCarIdFromUrl();
 
-        // 如果 URL 没有，再从 localStorage 获取
         if (!selectedVin) {
             selectedVin = localStorage.getItem('selectedCarVin');
         } else {
-            // 如果 URL 有，顺便存到 localStorage，方便后续页面使用
             localStorage.setItem('selectedCarVin', selectedVin);
         }
 
@@ -33,13 +30,8 @@ async function initializeReservationPage() {
             return;
         }
 
-        // 加载车辆信息
         await loadSelectedCar(selectedVin);
-
-        // 初始化表单
         initializeForm();
-
-        // 绑定事件
         bindReservationEvents();
 
     } catch (error) {
@@ -521,6 +513,7 @@ async function submitReservationDirectly() {
     try {
         // 显示加载状态
         const $submitBtn = $('#submitBtn');
+        const originalText = $submitBtn.html();
         $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Creating Reservation...');
 
         const formData = getFormData();
@@ -542,6 +535,9 @@ async function submitReservationDirectly() {
         // 保存当前预订信息到localStorage
         localStorage.setItem('pendingReservation', JSON.stringify(reservationData));
 
+        // 🎯 重要：同时保存表单数据，确保不丢失
+        saveFormData();
+
         // 显示确认选项模态框
         showConfirmationOptionsModal(reservationData);
 
@@ -550,7 +546,8 @@ async function submitReservationDirectly() {
         showError('Failed to prepare reservation. Please try again.');
     } finally {
         // 恢复按钮状态
-        $('#submitBtn').prop('disabled', false).html('Submit Reservation');
+        const $submitBtn = $('#submitBtn');
+        $submitBtn.prop('disabled', false).html('Submit Reservation');
     }
 }
 
@@ -611,7 +608,48 @@ function showConfirmationOptionsModal(reservationData) {
     modal.show();
 }
 
-// 立即确认预订
+// 修改后的保存预订信息供后续确认函数
+function saveForLater() {
+    try {
+        const savedReservation = localStorage.getItem('pendingReservation');
+        if (!savedReservation) {
+            throw new Error('No pending reservation found');
+        }
+
+        // 隐藏当前模态框
+        $('#confirmationOptionsModal').modal('hide');
+
+        // 🎯 显示一个简单的成功提示
+        showSimpleSaveMessage();
+
+    } catch (error) {
+        console.error('Error saving reservation:', error);
+        showError('Failed to save reservation details. Please try again.');
+    }
+}
+
+// 简单的保存成功提示
+function showSimpleSaveMessage() {
+    // 使用简单的 toast 提示，不要复杂的模态框
+    const toastHtml = `
+        <div class="alert alert-success alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" 
+             role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Saved!</strong> Your reservation details have been saved.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+
+    $('body').append(toastHtml);
+
+    // 3秒后自动消失
+    setTimeout(() => {
+        $('.alert.position-fixed').alert('close');
+    }, 3000);
+}
+
+// 修改立即确认预订函数
 async function proceedWithConfirmation() {
     try {
         const savedReservation = localStorage.getItem('pendingReservation');
@@ -624,9 +662,9 @@ async function proceedWithConfirmation() {
         // 显示加载状态
         $('.confirm-now-btn')
             .prop('disabled', true)
-            .html('<span class="spinner-border spinner-border-sm me-2"></span>Confirming...');
+            .html('<span class="spinner-border spinner-border-sm me-2"></span>Creating Draft...');
 
-        // 提交到API
+        // 🎯 第一步：创建草稿订单（不影响车辆可用性）
         const response = await fetch('/api/orders', {
             method: 'POST',
             headers: {
@@ -638,45 +676,104 @@ async function proceedWithConfirmation() {
         const data = await response.json();
 
         if (data.success) {
-            // 清除暂存的预订信息
-            localStorage.removeItem('pendingReservation');
+            // 更新按钮状态
+            $('.confirm-now-btn')
+                .html('<span class="spinner-border spinner-border-sm me-2"></span>Confirming...');
 
-            // 隐藏选项模态框
-            $('#confirmationOptionsModal').modal('hide');
+            // 🎯 第二步：立即确认订单（这时才影响车辆可用性）
+            const confirmResponse = await fetch(`/api/orders/${data.order.id}/confirm`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
 
-            // 显示成功确认模态框
-            handleOrderSubmissionSuccess(data);
+            const confirmData = await confirmResponse.json();
+
+            if (confirmData.success) {
+                // 清除暂存的预订信息
+                localStorage.removeItem('pendingReservation');
+
+                // 隐藏选项模态框
+                $('#confirmationOptionsModal').modal('hide');
+
+                // 显示最终成功确认模态框
+                showFinalSuccessModal(confirmData);
+            } else {
+                throw new Error(confirmData.message || 'Failed to confirm reservation');
+            }
         } else {
-            throw new Error(data.message || 'Failed to create reservation');
+            throw new Error(data.message || 'Failed to create reservation draft');
         }
 
     } catch (error) {
         console.error('Error confirming reservation:', error);
         showError('Failed to confirm reservation. Please try again.');
+
+        // 重置按钮状态
+        $('.confirm-now-btn')
+            .prop('disabled', false)
+            .html('<i class="fas fa-check-circle me-2"></i>Confirm Now');
     }
 }
 
-// 保存预订信息供后续确认
-function saveForLater() {
-    try {
-        const savedReservation = localStorage.getItem('pendingReservation');
-        if (!savedReservation) {
-            throw new Error('No pending reservation found');
-        }
+// 新增：显示最终成功确认的模态框
+function showFinalSuccessModal(confirmData) {
+    const successModalHtml = `
+        <div class="modal fade" id="finalSuccessModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">🎊 Booking Confirmed!</h5>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4>Congratulations! Your booking is confirmed</h4>
+                        <p>You will receive a confirmation email shortly.</p>
+                        <div class="alert alert-success">
+                            <strong>Order Status:</strong> <span class="badge bg-success">Confirmed</span>
+                        </div>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Important:</strong> This car is now reserved for your dates and unavailable for other bookings.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+                            <i class="fas fa-search me-2"></i>Browse More Cars
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 
-        // 隐藏当前模态框
-        $('#confirmationOptionsModal').modal('hide');
+    // 移除可能存在的旧模态框
+    $('#finalSuccessModal').remove();
 
-        // 添加一个标记到localStorage，用于在主页显示提示
-        localStorage.setItem('showSaveSuccess', 'true');
+    // 添加新模态框到页面
+    $('body').append(successModalHtml);
 
-        // 直接跳转到首页
-        window.location.href = '/';
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('finalSuccessModal'));
+    modal.show();
 
-    } catch (error) {
-        console.error('Error saving reservation:', error);
-        showError('Failed to save reservation details. Please try again.');
+    // 触发庆祝效果（如果有 confetti 库）
+    if (typeof confetti !== 'undefined') {
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
     }
+
+    // 更新当前页面的车辆状态显示
+    updateCarStatusAfterConfirmation(confirmData.carStatus);
 }
 
 // 显示订单确认模态框
@@ -942,5 +1039,61 @@ function formatDate(dateString) {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
+    });
+}
+
+// 添加新函数：重新加载保存的预订信息
+function loadSavedReservation() {
+    const savedReservation = localStorage.getItem('pendingReservation');
+    if (savedReservation) {
+        try {
+            const reservationData = JSON.parse(savedReservation);
+
+            // 检查是否与当前选中的车辆匹配
+            if (selectedCar && reservationData.vin === selectedCar.vin) {
+                // 显示提示信息
+                showReservationContinueOption(reservationData);
+            }
+        } catch (error) {
+            console.error('Error loading saved reservation:', error);
+            // 清除损坏的数据
+            localStorage.removeItem('pendingReservation');
+        }
+    }
+}
+
+// 新函数：显示继续预订的选项
+function showReservationContinueOption(reservationData) {
+    const alertHtml = `
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-clock me-2"></i>
+            <strong>Continue Your Reservation</strong>
+            <p class="mb-2">You have a saved reservation for this car. Would you like to continue where you left off?</p>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-success" id="continueReservation">
+                    <i class="fas fa-play me-1"></i>Continue
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="startFresh">
+                    <i class="fas fa-refresh me-1"></i>Start Fresh
+                </button>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+
+    // 在表单顶部显示提示
+    $('#reservationForm').prepend(alertHtml);
+
+    // 绑定按钮事件
+    $('#continueReservation').on('click', function () {
+        // 直接进入确认流程
+        showConfirmationOptionsModal(reservationData);
+        $('.alert').alert('close');
+    });
+
+    $('#startFresh').on('click', function () {
+        // 清除保存的预订信息，开始新的预订
+        localStorage.removeItem('pendingReservation');
+        $('.alert').alert('close');
     });
 }

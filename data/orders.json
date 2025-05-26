@@ -17,41 +17,7 @@
     "createdAt": "2025-01-10T08:30:00.123Z"
   },
   {
-    "id": "1703942400456",
-    "vin": "8HGCM82633A890123",
-    "customerInfo": {
-      "name": "Sarah Johnson",
-      "email": "sarah.johnson@email.com",
-      "phone": "+1-555-987-6543",
-      "driverLicense": "D987654321"
-    },
-    "rentalPeriod": {
-      "startDate": "2025-01-20",
-      "days": 3
-    },
-    "totalPrice": 210,
-    "status": "confirmed",
-    "createdAt": "2025-01-11T14:20:00.456Z"
-  },
-  {
-    "id": "1704028800789",
-    "vin": "EHGCM82633A456789",
-    "customerInfo": {
-      "name": "Michael Brown",
-      "email": "michael.brown@email.com",
-      "phone": "+1-555-456-7890",
-      "driverLicense": "D456789123"
-    },
-    "rentalPeriod": {
-      "startDate": "2025-01-25",
-      "days": 7
-    },
-    "totalPrice": 665,
-    "status": "pending",
-    "createdAt": "2025-01-12T10:15:00.789Z"
-  },
-  {
-    "id": "1748124501225",
+    "id": "1748245217358",
     "vin": "2HGCM82633A654321",
     "selectedCar": {
       "vin": "2HGCM82633A654321",
@@ -63,7 +29,7 @@
       "fuelType": "Gasoline",
       "pricePerDay": 42,
       "available": true,
-      "image": "/api/placeholder/400/300",
+      "image": "https://images.unsplash.com/photo-1617469767053-d3b523a0b982",
       "description": "Spacious and comfortable sedan with excellent safety ratings."
     },
     "customerInfo": {
@@ -73,12 +39,12 @@
       "driverLicense": "SDsdfafdad"
     },
     "rentalPeriod": {
-      "startDate": "2025-05-25",
+      "startDate": "2025-05-27",
       "days": 1
     },
     "totalPrice": 42,
     "status": "confirmed",
-    "createdAt": "2025-05-24T22:08:21.225Z",
-    "confirmedAt": "2025-05-24T22:08:30.014Z"
+    "createdAt": "2025-05-26T07:40:17.358Z",
+    "confirmedAt": "2025-05-26T07:40:17.363Z"
   }
 ]
