@@ -298,10 +298,12 @@ app.post('/api/orders', (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating reservation draft:', error);
+        console.error('❌ 创建订单详细错误:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to create reservation draft'
+            message: 'Failed to create reservation draft',
+            error: error.message,
+            stack: error.stack
         });
     }
 });
